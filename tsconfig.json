@@ -1,22 +1,76 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
+    /* Basic Options */
+    "target": "ES2022",             /* Specify ECMAScript target version */
+    "module": "NodeNext",           /* Specify module code generation */
+    "lib": ["ES2022", "DOM"],       /* Specify library files to be included */
+    "outDir": "./dist",             /* Redirect output structure to the directory */
+    "rootDir": "./src",             /* Specify the root directory of input files */
+    "declaration": true,            /* Generate .d.ts files from TypeScript and JavaScript files */
+    "sourceMap": true,              /* Generate corresponding .map files */
+    "removeComments": false,        /* Do not remove comments in output */
+    "incremental": true,            /* Enable incremental compilation */
+
+    /* Strict Type-Checking Options */
+    "strict": true,                 /* Enable all strict type-checking options */
+    "noImplicitAny": true,          /* Raise error on expressions and declarations with an implied 'any' type */
+    "strictNullChecks": true,       /* Enable strict null checks */
+    "strictFunctionTypes": true,    /* Enable strict checking of function types */
+    "strictBindCallApply": true,    /* Enable strict 'bind', 'call', and 'apply' methods on functions */
+    "strictPropertyInitialization": true, /* Enable strict checking of property initialization in classes */
+    "noImplicitThis": true,         /* Raise error on 'this' expressions with an implied 'any' type */
+    "alwaysStrict": true,           /* Parse in strict mode and emit "use strict" for each source file */
+
+    /* Additional Checks */
+    "noUnusedLocals": true,         /* Report errors on unused locals */
+    "noUnusedParameters": true,     /* Report errors on unused parameters */
+    "noImplicitReturns": true,      /* Report error when not all code paths in function return a value */
+    "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement */
+    "noUncheckedIndexedAccess": true, /* Include 'undefined' in index signature results */
+
+    /* Module Resolution Options */
+    "moduleResolution": "NodeNext", /* Specify module resolution strategy */
+    "baseUrl": ".",                 /* Base directory to resolve non-absolute module names */
     "paths": {
+      "@/*": ["src/*"],
       "@backend/*": ["src/backend/*"],
       "@frontend/*": ["src/frontend/*"],
       "@config/*": ["src/config/*"],
-      "@database/*": ["src/database/*"]
-    }
+      "@database/*": ["src/database/*"],
+      "@models/*": ["src/backend/models/*"],
+      "@controllers/*": ["src/backend/controllers/*"],
+      "@routes/*": ["src/backend/routes/*"],
+      "@middleware/*": ["src/backend/middleware/*"],
+      "@services/*": ["src/backend/services/*"],
+      "@utils/*": ["src/backend/utils/*"],
+      "@tests/*": ["src/backend/tests/*"],
+      "@components/*": ["src/frontend/components/*"],
+      "@hooks/*": ["src/frontend/hooks/*"],
+      "@pages/*": ["src/frontend/pages/*"],
+      "@styles/*": ["src/frontend/styles/*"],
+      "@assets/*": ["src/frontend/assets/*"]
+    },
+    "esModuleInterop": true,        /* Enables emit interoperability between CommonJS and ES Modules */
+    "resolveJsonModule": true,      /* Allow importing .json files */
+    "allowSyntheticDefaultImports": true, /* Allow default imports from modules with no default export */
+
+    /* Advanced Options */
+    "skipLibCheck": true,           /* Skip type checking of declaration files */
+    "forceConsistentCasingInFileNames": true, /* Ensure case sensitivity is enforced */
+    "useDefineForClassFields": true /* Use modern JavaScript runtime semantics for class fields */
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.spec.ts"]
+  "include": [
+    "src/**/*",
+    ".eslintrc.js",
+    "jest.config.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ],
+  "ts-node": {
+    "swc": true,
+    "transpileOnly": true
+  }
 } 

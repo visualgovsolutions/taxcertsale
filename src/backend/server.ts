@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import config from '../config';
+import config from '@config/index';
 
 const app = express();
 const port = config.server.port;
@@ -28,7 +28,12 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server running in ${config.server.nodeEnv} mode on port ${port}`);
-}); 
+// Only start the server if this file is run directly, not if it's imported in tests
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server running in ${config.server.nodeEnv} mode on port ${port}`);
+  });
+}
+
+// Export the Express app for testing purposes
+export { app }; 

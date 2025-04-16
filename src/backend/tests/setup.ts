@@ -1,6 +1,6 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import testConfig from '../../config/test';
+import testConfig from '@config/test';
 
 // Global test setup before all tests
 export async function setupTestEnvironment() {
@@ -27,7 +27,9 @@ export async function clearDatabase() {
   
   for (const key in collections) {
     const collection = collections[key];
-    await collection.deleteMany({});
+    if (collection) {
+      await collection.deleteMany({});
+    }
   }
 }
 
