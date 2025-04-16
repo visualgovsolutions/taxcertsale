@@ -1,6 +1,7 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import testConfig from '@config/test';
+import { app } from '../server';
 
 // Global test setup before all tests
 export async function setupTestEnvironment() {
@@ -36,7 +37,6 @@ export async function clearDatabase() {
 // Helper to create test server instance
 export function createTestServer() {
   // This would import your Express app without starting the server
-  const { app } = require('../server');
   return app;
 }
 
