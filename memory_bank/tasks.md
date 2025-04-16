@@ -112,479 +112,158 @@ This implementation sequence follows the natural dependency flow while allowing 
 
 ## Level 1 Implementation Tasks
 
+> **Simplification Context**: Level 1 tasks focus on establishing core functionality with minimal complexity. The goal is to build a working foundation that can be enhanced in later phases.
+
 ### Authentication Implementation
-- [ ] Set up JWT authentication with short-lived tokens
-  - Implement 15-minute expiration for access tokens
-  - Create secure refresh token system with longer expiration
-  - Design token rotation strategy for security
-  - Implement client-side token management
+- [ ] Set up basic JWT authentication
+  - Implement 1-hour expiration for access tokens (simpler than 15-minute tokens)
+  - Create simple refresh token system
+  - Implement basic client-side token storage
 - [ ] Create token generation service
-  - Configure JWT signing with strong keys
-  - Implement payload structure with claims
-  - Set up token blacklisting for critical scenarios
-  - Create token debugging utilities
-- [ ] Design refresh token flow
+  - Configure JWT signing with secure keys
+  - Implement essential payload structure with basic claims
+  - Create simple token validation utilities
+- [ ] Design authentication flow
   - Implement secure storage for refresh tokens
-  - Create token refresh endpoint with validation
-  - Design refresh token revocation mechanism
-  - Add multi-device session tracking
+  - Create token refresh endpoint
+  - Add basic session management
 - [ ] Implement authentication middleware
   - Create JWT verification middleware
-  - Add role and permission validation
-  - Implement token expiration handling
-  - Design authentication error responses
+  - Add simple role-based authorization
+  - Handle expired tokens gracefully
+  - Create consistent error responses
+
+> **Note**: Starting with a simpler authentication system allows faster implementation while maintaining security. Advanced features like token rotation, multi-device tracking, and complex permission systems can be added in later phases.
+
 ### Database Connection Management
-- [ ] Implement single connection pool with dynamic sizing
-  - Configure connection pool size limits based on server resources
-  - Implement dynamic scaling based on query load
-  - Set up connection timeout and retry mechanisms
-  - Create health monitoring for database connections
-- [ ] Design database connection factory
-  - Implement connection acquisition with timeout
-  - Create connection release mechanisms
-  - Add connection validation before use
-  - Implement logging for connection usage patterns
-- [ ] Set up connection pool metrics
-  - Track active connections and wait times
-  - Monitor connection acquisition patterns
-  - Create alerts for pool saturation
-  - Implement performance tracking for slow queries
+- [ ] Implement basic connection pool
+  - Configure fixed connection pool size based on environment
+  - Set up simple connection timeout and retry logic
+  - Create basic connection health checks
+- [ ] Design simple database access pattern
+  - Implement connection acquisition with error handling
+  - Create standard connection release approach
+  - Add basic connection validation
+- [ ] Set up minimal connection monitoring
+  - Track basic connection status
+  - Log connection errors consistently
+
+> **Note**: A simpler database connection approach is more reliable for initial implementation. Advanced features like dynamic scaling, complex metrics, and sophisticated monitoring can be added as the application matures.
+
 ### Error Handling System
-- [ ] Design centralized error handler with error classes
-  - Create base error class hierarchy
-  - Implement domain-specific error subclasses
-  - Add error codes and message standardization
-  - Create error serialization for API responses
+- [ ] Design basic error handler
+  - Create fundamental error class hierarchy
+  - Implement standard HTTP error responses
+  - Add consistent error codes for common scenarios
 - [ ] Implement error middleware
-  - Create global Express error handler
-  - Add error logging with contextual information
-  - Implement error response formatting
-  - Design different handling for different error types
-- [ ] Create error monitoring system
-  - Add severity classification for errors
-  - Implement alert thresholds for critical errors
-  - Create error dashboards for monitoring
-  - Design error aggregation for pattern detection
+  - Create Express error handler
+  - Add basic error logging
+  - Implement standard error response format
+- [ ] Set up simple error tracking
+  - Classify errors by severity
+  - Implement basic error logging to files
+
+> **Note**: This simplified error system provides consistent error handling while deferring complex monitoring, dashboards, and alerting to later phases when actual error patterns are better understood.
+
 ### GraphQL API Implementation
 - [ ] Set up Apollo Server with Express
-  - Configure GraphQL middleware
-  - Implement schema stitching approach
+  - Configure basic GraphQL middleware
   - Set up development playground
-  - Add request logging and monitoring
+  - Implement essential logging
 - [ ] Design core GraphQL schema
-  - Create schema first approach with type definitions
-  - Implement scalar types for custom data
-  - Design input types for mutations
-  - Create consistent naming conventions
-- [ ] Implement resolver structure
+  - Create schema first approach with essential types
+  - Design basic input types for mutations
+  - Establish simple naming conventions
+- [ ] Implement basic resolver structure
   - Set up resolver organization by domain
-  - Create data loader pattern for efficient queries
-  - Implement pagination for list queries
-  - Add field-level authorization
-- [ ] Design GraphQL authentication integration
-  - Implement context creation with JWT
-  - Create directive-based authorization
-  - Add per-field permission checks
-  - Design error handling specific to GraphQL
+  - Implement simple pagination for lists
+  - Add basic field-level permissions
+- [ ] Add authentication to GraphQL
+  - Implement context creation with user data
+  - Add simple permission checks to resolvers
+  - Create standard error handling for authentication failures
+
+> **Note**: This approach establishes a functional GraphQL API while deferring complex features like data loaders, directive-based authorization, and advanced schema stitching until usage patterns emerge.
 
 ### Backend Basics
 - [ ] Set up basic Express server
-  - Configure server startup with environment variables
-  - Set up route organization for API structure
-  - Implement graceful shutdown handling
-  - Add clustering for multi-core performance
-- [ ] Configure middleware for CORS, body parsing, etc.
-  - Set up CORS with proper origin configuration
-  - Configure body parser with size limits
-  - Implement request compression
-  - Add security middleware (helmet, etc.)
-- [ ] Implement basic health check endpoint
-  - Create service status indicators for main components
+  - Configure server with environment variables
+  - Create simple route organization
+  - Implement basic shutdown handling
+- [ ] Configure essential middleware
+  - Set up CORS with appropriate origins
+  - Configure body parser with reasonable limits
+  - Add basic security middleware (helmet)
+- [ ] Implement simple health check endpoint
+  - Create basic service status indicator
   - Add database connectivity check
-  - Implement version information endpoint
-  - Set up response time monitoring
+  - Include server version information
+
+> **Note**: This simplified backend provides a solid foundation while deferring advanced features like clustering, sophisticated middleware chains, and detailed health monitoring.
 
 ### Project Setup
-- [ ] Initialize package.json with basic dependencies
-  - Configure React, TypeScript, Node.js, Express dependencies
-  - Set up scripts for development, testing, and building
-  - Configure package resolution and workspace settings
-  - Include Florida-specific validation libraries
-- [ ] Configure TypeScript settings in tsconfig.json
-  - Set strict type checking and null checks
-  - Configure module resolution strategy
-  - Set up path aliases for cleaner imports
-  - Define separate configs for frontend and backend
-- [ ] Set up ESLint and Prettier for code formatting
-  - Configure React-specific ESLint rules
-  - Create consistent tab/space and quotation conventions
-  - Set up Git hooks with husky for pre-commit formatting
-  - Add TypeScript-specific linting rules
-- [ ] Create initial directory structure
-  - Set up frontend and backend folders
-  - Create component, service, and utility directories
-  - Establish consistent naming conventions
-  - Add gitkeep files for empty directories
-- [ ] Configure Jest for unit testing
-  - Set up test environment for React components
-  - Configure TypeScript support in Jest
-  - Create test utility functions and mocks
-  - Set up test coverage reporting
-- [ ] Set up basic CI workflow with GitHub Actions
-  - Configure automated testing on push/PR
-  - Set up linting checks in CI pipeline
-  - Create build verification steps
-  - Implement test coverage reporting
+- [ ] Initialize package.json with core dependencies
+  - Configure React, TypeScript, and Express
+  - Set up basic scripts for development and building
+  - Include only essential dependencies
+- [ ] Configure basic TypeScript settings
+  - Set up reasonable type checking
+  - Configure standard module resolution
+  - Create simple path aliases if needed
+- [ ] Set up minimal code formatting
+  - Configure basic ESLint and Prettier rules
+  - Establish consistent formatting standards
+  - Add simple pre-commit hooks
+- [ ] Create straightforward directory structure
+  - Separate frontend and backend clearly
+  - Establish basic component and service organization
+  - Use conventional naming patterns
+- [ ] Set up simple testing approach
+  - Configure Jest for basic testing
+  - Create examples for component and utility tests
+  - Set up simple test running script
+
+> **Note**: This focused setup approach gets development started quickly with essential tooling, deferring complex CI/CD, extensive testing frameworks, and sophisticated build configurations.
 
 ### Frontend Basics
-- [ ] Create basic React app structure
-  - Set up React Router for navigation
-  - Configure Redux store or Context API
-  - Establish folder structure for components, pages, hooks
-  - Set up TypeScript types and interfaces
-- [ ] Implement base layout component
-  - Create responsive container grid system
-  - Implement fixed header and flexible content area
-  - Design mobile navigation toggle
-  - Include footer with required legal information
-- [ ] Set up Material UI theme with company colors
-  - Define primary and secondary color palettes
-  - Create typography scale and font selections
-  - Configure spacing and breakpoint system
-  - Customize component default styles
-- [ ] Create reusable button components
-  - Primary, secondary, and tertiary button variants
-  - Loading state indicators
-  - Icon+text combinations
-  - Disabled state styling
-- [ ] Implement basic form input components
-  - Text inputs with validation states
-  - Select dropdown with custom styling
-  - Checkbox and radio button components
-  - Form groups with labels and help text
-- [ ] Create header and navigation placeholder
-  - Implement responsive app bar with logo
-  - Create user account dropdown menu
-  - Design main navigation with active states
-  - Include responsive breakpoints for mobile
+- [ ] Create minimal React app structure
+  - Set up React Router with essential routes
+  - Use Context API for state management (defer Redux)
+  - Establish simple component organization
+- [ ] Implement functional layout
+  - Create responsive container system
+  - Add basic header and content areas
+  - Include simple navigation components
+- [ ] Set up basic theme
+  - Define essential color palette
+  - Configure simple typography
+  - Set up basic spacing system
+- [ ] Create core UI components
+  - Implement essential buttons (primary/secondary)
+  - Build basic form inputs with validation
+  - Create simple data display components
+- [ ] Add responsive navigation
+  - Create basic header with logo
+  - Implement simple menu system
+  - Add mobile-friendly navigation
 
-- [ ] Set up basic Express server
+> **Note**: This streamlined frontend approach establishes a functional UI system while deferring complex components, sophisticated state management, and advanced styling until the core application flow is established.
+
 ### Documentation
-- [ ] Create README with setup instructions
-  - Document installation prerequisites
-  - Add step-by-step setup guide
-  - Include troubleshooting section
-  - Document available npm scripts
-- [ ] Document API endpoints in Swagger format
-  - Create OpenAPI 3.0 specification
+- [ ] Create basic README
+  - Document simple setup instructions
+  - Add essential troubleshooting information
+  - Include core npm scripts
+- [ ] Document main API endpoints
+  - List primary endpoints and their purpose
   - Document request/response formats
-  - Add authentication requirements
-  - Include example requests and responses
-- [ ] Create environment variable documentation
-  - List all required environment variables
-  - Document default values and valid options
-  - Create example .env file template
-  - Include security notes for sensitive variables
-- [ ] Set up JSDocs for code documentation
-  - Configure automatic documentation generation
-  - Create consistent documentation standards
-  - Document complex functions and components
-  - Generate TypeScript interface documentation
+  - Note authentication requirements
+- [ ] Add environment variable documentation
+  - List required environment variables
+  - Provide example values
+  - Create simple .env template
 
-### Property Listing Basics
-- [ ] Create property card component
-  - Design responsive card with property image
-  - Display key property details (address, value, status)
-  - Add certificate info summary
-  - Include action buttons for watchlist/details
-- [ ] Implement basic property list view
-  - Create paginated property grid
-  - Add list/grid view toggle
-  - Implement sorting options
-  - Design empty and loading states
-- [ ] Set up property detail page template
-  - Create tabbed interface for different information categories
-  - Implement property attribute display
-  - Add certificate history section
-  - Include related documents viewer
-- [ ] Create mock property data for development
-  - Generate realistic Florida property examples
-  - Include various property types and statuses
-  - Create associated certificate data
-  - Simulate historical auction data
-- [ ] Implement basic property search form
-  - Add address and parcel ID search fields
-  - Include owner name search option
-  - Create property value range filters
-  - Add Florida county selection field
-- [ ] Add property type filter component
-  - Create checkbox group for property types
-  - Implement filter state management
-  - Add clear filters option
-  - Design mobile-friendly filter collapse
-
-### Certificate Components
-- [ ] Create certificate summary component
-  - Display certificate number and face value
-  - Show interest rate and status
-  - Include property identification
-  - Add auction status indicator
-- [ ] Implement certificate detail view template
-  - Create sections for certificate data
-  - Show bid history if available
-  - Include property details summary
-  - Add payment status information
-- [ ] Create certificate status badge component
-  - Design color-coded status indicators
-  - Include tooltip explanations
-  - Make badges accessible with text alternatives
-  - Support various certificate statuses
-- [ ] Set up certificate history list component
-  - Create timeline view of certificate events
-  - Include bid and status change history
-  - Add filter/sort options for history items
-  - Design responsive list for all device sizes
-- [ ] Add certificate document viewer placeholder
-  - Create PDF preview component
-  - Implement document download functionality
-  - Add document type filtering
-  - Include document metadata display
-
-### Admin Components
-- [ ] Create admin dashboard layout
-  - Design responsive dashboard grid
-  - Include navigation sidebar with admin options
-  - Add quick stats overview section
-  - Create activity feed component
-- [ ] Implement user list view template
-  - Create filterable user data table
-  - Add user status indicators
-  - Include action menu for user management
-  - Design responsive table with card fallback
-- [ ] Create basic data table component
-  - Implement pagination controls
-  - Add sorting functionality
-  - Include column customization options
-  - Create mobile-responsive table alternatives
-- [ ] Set up admin navigation sidebar
-  - Create hierarchical menu structure
-  - Add collapsible section groups
-  - Implement access control on menu items
-  - Design mobile drawer navigation alternative
-- [ ] Implement simple stats cards for dashboard
-  - Create county revenue summary card
-  - Add active certificates count card
-  - Include pending verification stats
-  - Design auction performance metrics card
-
-### County Management
-### County Management
-- [ ] Create county entity model
-  - Define county schema with required fields
-  - Include contact information section
-  - Add county-specific settings fields
-  - Create relationships to properties/certificates
-- [ ] Implement basic county listing endpoint
-  - Create GET API for county list
-  - Add filtering and pagination
-  - Include county stats in response
-  - Implement proper error handling
-- [ ] Add county detail component
-  - Design county profile information display
-  - Show active auction status
-  - Include certificate statistics
-  - Add county administrators section
-- [ ] Create county selection dropdown
-  - Implement searchable county dropdown
-  - Add county logo/icon display
-  - Cache county list for performance
-  - Design responsive mobile version
-- [ ] Set up county admin view placeholder
-  - Create county settings form template
-  - Add auction configuration section
-  - Include user permission management
-  - Design import/export county data tools
-
-### Notification System
-- [ ] Create notification component
-  - Design badge indicator for unread notifications
-  - Implement notification dropdown menu
-  - Create notification list with timestamps
-  - Add read/unread status toggling
-- [ ] Implement toast notification system
-  - Create different toast types (success, error, info)
-  - Add auto-dismiss with configuration
-  - Implement stacking for multiple notifications
-  - Design responsive placement for all devices
-- [ ] Set up notification context provider
-  - Create React context for notification state
-  - Implement notification queue management
-  - Add custom hooks for notification creation
-  - Design notification persistence options
-- [ ] Create notification API service
-  - Implement endpoint for user notifications
-  - Add WebSocket support for real-time updates
-  - Create notification preference management
-  - Add notification read/dismiss functionality
-- [ ] Add basic email template structure
-  - Create responsive HTML email templates
-  - Design transactional email layouts
-  - Implement template variable system
-  - Add email preview functionality
-
-### DevOps Setup
-
-- [ ] Implement code standards and linting tools
-  - Set up ESLint with TypeScript configuration
-    - Install and configure ESLint using template from memory_bank/devops/templates/.eslintrc.js
-    - Add TypeScript parser and plugin
-    - Configure React-specific linting rules
-    - Set up VS Code integration for real-time linting
-  - Configure Prettier for code formatting
-    - Install Prettier using template from memory_bank/devops/templates/.prettierrc
-    - Configure Prettier and ESLint integration
-    - Create script for codebase-wide formatting
-    - Document Prettier usage in README
-  - Implement EditorConfig for editor consistency
-    - Add .editorconfig file using template from memory_bank/devops/templates/.editorconfig
-    - Document editor setup in development guide
-    - Verify compatibility with VS Code, WebStorm, and other IDEs
-  - Add pre-commit hooks with Husky
-    - Install and configure Husky for Git hooks
-    - Set up pre-commit hook for linting and formatting
-    - Add commit message validation with commitlint
-    - Document Git workflow with hooks
-  - Create lint-staged configuration for staged files
-    - Set up lint-staged to only process changed files
-    - Configure automatic fixes when possible
-    - Add test verification for relevant changes
-- [ ] Configure GitHub Actions for CI/CD pipeline
-  - Implement CI workflow with testing and build steps
-    - Set up ci.yml workflow using template from .github/workflows/ci.yml
-    - Configure Node.js environment and caching
-    - Set up test runners with coverage reporting
-    - Add artifact publishing for build outputs
-    - Configure notifications for build failures
-  - Create CD workflow for Azure deployment
-    - Set up cd.yml workflow using template from .github/workflows/cd.yml
-    - Configure Azure authentication using service principals
-    - Create staging and production deployment steps
-    - Implement approval gate for production deployments
-    - Add rollback capability for failed deployments
-  - Set up environment-specific configurations
-    - Create environment files for development, staging, and production
-    - Configure environment variable handling in workflows
-    - Set up secret management for sensitive configuration
-    - Document environment setup process
-  - Configure automated testing in pipeline
-    - Add unit test execution in CI workflow
-    - Set up integration test suite with database
-    - Configure end-to-end tests with Cypress
-    - Add performance testing for critical workflows
-  - Implement build artifact management
-    - Configure artifact naming with version information
-    - Set up artifact retention policies
-    - Create artifact download workflow for debugging
-    - Implement artifact signing for security
-- [ ] Implement code standards documentation
-  - Create comprehensive coding standards document using memory_bank/code_standards/coding_standards.md
-  - Document TypeScript best practices
-  - Create React component development guidelines
-  - Document database naming conventions
-  - Add API design guidelines
-- [ ] Set up development environment standardization
-  - Create automated dev environment setup script
-  - Document required software and versions
-  - Implement Docker-based development environment
-  - Create onboarding documentation for new developers
-  - Add troubleshooting guide for common issues
-  - Create lint-staged configuration for staged files
-- [ ] Configure GitHub Actions for CI/CD pipeline
-  - Implement CI workflow with testing and build steps
-  - Create CD workflow for Azure deployment
-  - Set up environment-specific configurations
-  - Configure automated testing in pipeline
-  - Implement build artifact management
-- [ ] Set up Azure infrastructure using Infrastructure as Code
-  - Create Resource Groups for different environments
-  - Set up networking and security components
-  - Configure Azure App Service with deployment slots
-  - Set up Azure Database for PostgreSQL
-  - Implement Azure Redis Cache for session management
-- [ ] Implement Azure security and authentication
-  - Create Azure service principals for automation
-  - Set up Key Vault for secret management
-  - Configure GitHub repository secrets
-  - Implement RBAC for Azure resources
-  - Set up monitoring and alerting
-- [ ] Configure blue-green deployment strategy
-  - Set up production and staging slots
-  - Implement deployment slot swapping
-  - Create rollback procedures
-  - Set up post-deployment verification
-  - Implement application health checks
-- [ ] Create basic Dockerfile
-  - Configure multi-stage build for optimization
-  - Set up proper Node.js base image
-  - Add security hardening steps
-  - Configure proper file permissions
-- [ ] Set up Docker Compose for development
-  - Create services for API, frontend, and database
-  - Configure volume mounts for development
-  - Set up environment variable handling
-  - Add networking between services
-- [ ] Create database backup script
-  - Implement automated backup routine
-  - Add compression and encryption
-  - Configure retention policy
-  - Create restore verification steps
-- [ ] Implement basic health check endpoint
-  - Add readiness and liveness probe endpoints
-  - Include dependency status checks
-  - Create metrics collection endpoint
-  - Document health check response formats
-- [ ] Set up environment configuration loader
-  - Implement dotenv with validation
-  - Add support for different environments
-  - Create configuration documentation
-  - Add sensitive value masking
-
-### Security Basics
-- [ ] Implement rate limiting middleware
-  - Configure request limits by endpoint
-  - Add IP-based rate limiting
-  - Implement token bucket algorithm
-  - Create rate limit response headers
-- [ ] Add CSRF protection
-  - Implement anti-CSRF tokens
-  - Configure secure cookie settings
-  - Add same-site cookie attributes
-  - Create CSRF validation middleware
-- [ ] Create security headers middleware
-  - Implement Content-Security-Policy
-  - Add X-XSS-Protection headers
-  - Configure X-Frame-Options
-  - Set up Referrer-Policy
-- [ ] Set up input sanitization
-  - Add HTML sanitization for user input
-  - Implement SQL injection protection
-  - Create validation middleware
-  - Add schema-based validation
-- [ ] Implement basic role-based access control
-  - Create permission definition system
-  - Implement role hierarchy
-  - Add access control middleware
-  - Design role assignment interface
-- [ ] Add authentication audit logging
-  - Log all login attempts (success/failure)
-  - Record password changes and resets
-  - Track role and permission changes
-  - Implement secure audit log storage
-
-### Completed Tasks
-- [x] Create initial project plan
-- [x] Analyze project requirements
-- [x] Determine technology stack
+> **Note**: This documentation approach covers essential information for development while deferring extensive API specifications, comprehensive guides, and automated documentation generation.
 
 ## Level 2 Implementation Tasks
 
