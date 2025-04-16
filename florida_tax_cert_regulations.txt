@@ -1,0 +1,27 @@
+## 11.5 Florida Tax Certificate Regulations
+
+### Legal Framework
+- Tax certificates represent enforceable first liens against property for unpaid real estate taxes
+- Certificates are governed by Florida Statutes and Department of Revenue guidelines
+- System must maintain complete audit trails for compliance with Florida regulations
+- Certificate data must include all legally required fields and documentation
+
+### Auction Rules
+- Reverse-auction format with bidding downward on interest rates
+- Maximum interest rate starts at 18%
+- Minimum interest rate is 5% with exception for zero bids (which earn zero interest)
+- Certificates awarded to lowest interest rate bidder
+- System must enforce all Florida-mandated interest rate rules
+- Support for certificate batching (groups closing at scheduled intervals)
+
+### Bidder Responsibilities
+- Pre-registration and verification requirements
+- Binding obligation to pay for all awarded certificates
+- Payment enforcement mechanisms and penalties
+- Compliance with Florida investor verification requirements
+
+### County Customization
+- Support for county-specific auction timing and rules within Florida's legal framework
+- Flexible certificate batching configuration (hourly, daily, or custom intervals)
+- County-specific reporting requirements
+- Integration with Florida Department of Revenue verification systems
