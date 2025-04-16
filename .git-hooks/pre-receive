@@ -1,0 +1,18 @@
+#!/bin/bash
+
+while read oldrev newrev refname; do
+  # Detect branch deletion (newrev is all 0s)
+  if [[ "$newrev" == "0000000000000000000000000000000000000000" ]]; then
+    echo "❌ ERROR: Branch deletion is not allowed."
+    exit 1
+  fi
+
+  # Detect force push (if oldrev is not an ancestor of newrev)
+  if ! git merge-base --is-ancestor "$oldrev" "$newrev"; then
+    echo "⚠️  Force push detected on $refname"
+    echo "Force pushes are not allowed. Contact an admin if this was intentional."
+    exit 1
+  fi
+done
+
+exit 0 

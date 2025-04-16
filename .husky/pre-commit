@@ -1,0 +1,16 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Check commit size - reject if too large
+FILES_CHANGED=$(git diff --cached --name-only | wc -l)
+LINES_CHANGED=$(git diff --cached --stat | tail -n1 | awk '{print $1}')
+
+if [ "$LINES_CHANGED" -gt "300" ] || [ "$FILES_CHANGED" -gt "10" ]; then
+  echo "⛔️ Commit too large! Please make smaller, more frequent commits."
+  echo "   Changes: $LINES_CHANGED lines across $FILES_CHANGED files"
+  echo "   Consider breaking this into multiple smaller commits."
+  exit 1
+fi
+
+# Run linting on staged files
+npx lint-staged
