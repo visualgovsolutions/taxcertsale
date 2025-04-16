@@ -1,0 +1,88 @@
+name: Deploy to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Deploy to Azure Web App (Staging)
+        if: ${{ github.event.inputs.environment == 'staging' || github.event_name == 'push' }}
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'taxcert-api-staging'
+          slot-name: 'staging'
+          package: 'dist'
+      
+      - name: Run E2E tests on staging
+        if: ${{ github.event.inputs.environment == 'staging' || github.event_name == 'push' }}
+        run: |
+          npm install -g cypress
+          cypress run --config baseUrl=https://taxcert-api-staging.azurewebsites.net
+      
+      - name: Deploy to Azure Web App (Production)
+        if: ${{ github.event.inputs.environment == 'production' }}
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'taxcert-api-prod'
+          slot-name: 'production'
+          package: 'dist'
+      
+      - name: Swap staging slot to production
+        if: ${{ github.event.inputs.environment == 'production' }}
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az webapp deployment slot swap --resource-group taxcert-prod-rg --name taxcert-api-prod --slot staging --target-slot production
+      
+      - name: Run post-deployment verification
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Run health check on deployed application
+            HEALTH_CHECK_URL="https://taxcert-api-${{ github.event.inputs.environment || 'staging' }}.azurewebsites.net/api/health"
+            HTTP_STATUS=
+            
+            if [  -ne 200 ]; then
+              echo "Health check failed with status: "
+              exit 1
+            else
+              echo "Health check passed with status: "
+            fi
+      
+      - name: Azure logout
+        run: az logout
