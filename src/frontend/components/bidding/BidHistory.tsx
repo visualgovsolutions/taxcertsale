@@ -10,6 +10,14 @@ interface Bid {
   status: string;
 }
 
+interface BidEventData {
+  certificateId: string;
+  bidId: string;
+  bidderId: string;
+  interestRate: number;
+  timestamp: Date | string;
+}
+
 interface BidHistoryProps {
   certificateId: string;
   currentUserId?: string;
@@ -45,14 +53,14 @@ const BidHistory: React.FC<BidHistoryProps> = ({ certificateId, currentUserId })
   
   // Listen for new bids
   useEffect(() => {
-    const handleBidPlaced = (data: any) => {
+    const handleBidPlaced = (data: BidEventData) => {
       if (data.certificateId === certificateId) {
         const newBid: Bid = {
           id: data.bidId,
           certificateId: data.certificateId,
           bidderId: data.bidderId,
           interestRate: data.interestRate,
-          timestamp: new Date(data.timestamp),
+          timestamp: typeof data.timestamp === 'string' ? new Date(data.timestamp) : data.timestamp,
           status: 'active'
         };
         
@@ -65,7 +73,7 @@ const BidHistory: React.FC<BidHistoryProps> = ({ certificateId, currentUserId })
     return () => {
       socketService.off('bid_placed', handleBidPlaced);
     };
-  }, [certificateId]);
+  }, [certificateId, socketService]);
   
   // Format date for display
   const formatDate = (date: Date): string => {
