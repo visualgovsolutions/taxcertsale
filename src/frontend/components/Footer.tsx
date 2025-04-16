@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // No longer needed for JSX
 
 function Footer() {
   const currentYear = new Date().getFullYear();

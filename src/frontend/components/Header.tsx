@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // No longer needed for JSX
 import { Link } from 'react-router-dom';
 
 function Header() {

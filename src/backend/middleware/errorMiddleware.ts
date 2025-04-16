@@ -50,7 +50,7 @@ const sendErrorProd = (err: AppError | Error, res: Response) => {
 };
 
 // Global error handling middleware
-const globalErrorHandler = (err: AppError | Error, req: Request, res: Response, next: NextFunction) => {
+const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response, next: NextFunction) => {
   // Set default status code and status if not already set (e.g., by AppError)
   if (err instanceof AppError) {
       err.statusCode = err.statusCode || 500;

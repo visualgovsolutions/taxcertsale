@@ -19,22 +19,22 @@ const getPostgresPool = (): Pool => {
     console.log(`Initializing PostgreSQL connection pool for database "${poolConfig.database}" on ${poolConfig.host}:${poolConfig.port}`);
     pool = new Pool(poolConfig);
 
-    pool.on('error', (err, client) => {
+    pool.on('error', (err, _client) => {
       console.error('Unexpected error on idle PostgreSQL client', err);
       // Optionally, implement logic to remove the client or handle the error
     });
 
-    pool.on('connect', (client) => {
+    pool.on('connect', (_client) => {
       console.log(`PostgreSQL client connected from pool`);
       // You could set session parameters here if needed
       // client.query('SET DATESTYLE = iso, mdy');
     });
 
-    pool.on('acquire', (client) => {
+    pool.on('acquire', (_client) => {
         // console.log('PostgreSQL client acquired from pool');
     });
 
-    pool.on('remove', (client) => {
+    pool.on('remove', (_client) => {
        // console.log('PostgreSQL client removed from pool');
     });
 

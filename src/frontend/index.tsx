@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Use createRoot for React 18+
 import App from './App';
+import { AuthProvider } from './context/AuthContext'; // Import the AuthProvider
 import './styles/index.css'; // Import our CSS
 // Import base styles later if needed (e.g., index.css)
 // import './index.css'; 
@@ -13,6 +14,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>
 ); 

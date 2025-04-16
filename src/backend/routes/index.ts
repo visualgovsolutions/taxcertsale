@@ -1,10 +1,14 @@
 import { Router, Request, Response } from 'express';
 import healthRouter from './health';
+import complianceRouter from './compliance.routes';
 
 const router = Router();
 
 // Health check route
 router.use('/health', healthRouter);
+
+// Compliance routes
+router.use('/compliance', complianceRouter);
 
 // Root endpoint
 router.get('/', (req: Request, res: Response) => {

@@ -53,4 +53,20 @@ export const authorizeRole = (allowedRoles: string[]) => {
     next();
   };
 };
-*/ 
+*/
+
+export const authorizeRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Check if user object and role property exist
+    if (!req.user || typeof req.user === 'string' || !(req.user as JwtPayload).role) { // Type assertion for role access
+      return res.status(403).json({ message: 'Forbidden: Role information missing or invalid in token' });
+    }
+
+    const userRole = (req.user as JwtPayload).role;
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ message: `Forbidden: Role '${userRole}' not authorized for this resource` });
+    }
+    next(); // Role is allowed, proceed
+  };
+}; 

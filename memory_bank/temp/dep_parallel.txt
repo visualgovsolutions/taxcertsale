@@ -1,0 +1,8 @@
+1. **Auction System Core** (Level 2)
+   - WebSocket-based bidding engine
+   - Real-time bid processing
+   - Certificate batch management system
+   - Complexity factors: Real-time processing, concurrency, data integrity during auctions
+
+2. **Certificate Management** (Level 2)
+   - Certificate lifecycle with complex state transitions
