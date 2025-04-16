@@ -40,8 +40,8 @@ This system provides a platform for managing tax certificate sales, allowing use
 
 1. Clone the repository:
    ```
-   git clone https://github.com/visualgovsolutions/taxcertcale.git
-   cd taxcertcale
+   git clone https://github.com/visualgovsolutions/taxcertsale.git
+   cd taxcertsale
    ```
 
 2. Install dependencies:
