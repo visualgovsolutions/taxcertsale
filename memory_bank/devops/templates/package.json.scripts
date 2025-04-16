@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint --ext .ts,.tsx src/",
+    "lint:fix": "eslint --ext .ts,.tsx src/ --fix",
+    "format": "prettier --write 'src/**/*.{ts,tsx,css,scss}'",
+    "prepare": "husky install",
+    "pre-commit": "lint-staged",
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
+    "cypress": "cypress open",
+    "cypress:headless": "cypress run"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,scss}": [
+      "prettier --write"
+    ]
+  }
+}
