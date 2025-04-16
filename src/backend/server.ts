@@ -1,39 +1,103 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import http from 'http'; // Import http module
+import { Server } from 'socket.io'; // Import Socket.io
 import config from '@config/index';
+import mainRouter from '@routes/index'; // Import main router
+import { closePostgresPool, getPostgresPool } from '@database/postgresPool'; // Import pool functions
+import globalErrorHandler from '@middleware/errorMiddleware'; // Import error handler
+import { createApolloServer, createApolloMiddleware } from '@backend/graphql'; // Import Apollo setup
+import { json } from 'body-parser'; // Import json body parser specifically for GraphQL endpoint
+import { AuctionService } from '@services/auction/AuctionService'; // Import Auction Service
 
-const app = express();
-const port = config.server.port;
+// Global variable to store the auction service instance
+let auctionService: AuctionService | null = null;
 
-// Middleware
-app.use(cors());
-app.use(helmet());
-app.use(express.json());
+async function startServer() {
+  const app = express();
+  const port = config.server.port;
+  const httpServer = http.createServer(app);
 
-// Basic health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: config.server.nodeEnv,
+  // Initialize Socket.io
+  const io = new Server(httpServer, {
+    cors: {
+      origin: '*', // TODO: Configure this more restrictively in production
+      methods: ['GET', 'POST']
+    }
   });
-});
 
-// Root endpoint
-app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({
-    message: 'Florida Tax Certificate Sale API',
-    documentation: '/api-docs',
-  });
-});
+  // Initialize the auction service
+  const pool = getPostgresPool();
+  auctionService = new AuctionService(io, pool);
+  auctionService.initialize();
 
-// Only start the server if this file is run directly, not if it's imported in tests
-if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Server running in ${config.server.nodeEnv} mode on port ${port}`);
-  });
+  // Initialize Apollo Server
+  const apolloServer = createApolloServer(httpServer);
+  await apolloServer.start(); // Start Apollo Server
+
+  // Middleware
+  // Apply CORS and Helmet globally
+  app.use(cors());
+  app.use(helmet());
+
+  // Use express.json for general REST routes
+  app.use(express.json()); 
+
+  // GraphQL endpoint - Apply specific body parser and Apollo middleware
+  app.use(
+    '/graphql',
+    cors<cors.CorsRequest>(), // Re-apply CORS if needed for specific GQL origins
+    json(), // Use body-parser's json middleware for GraphQL
+    createApolloMiddleware(apolloServer) // Apply Apollo middleware
+  );
+
+  // Main application REST router
+  app.use('/', mainRouter); // Mount REST routes (excluding /graphql)
+
+  // Global error handling middleware - MUST be last!
+  app.use(globalErrorHandler);
+
+  // Basic graceful shutdown
+  const shutdown = (signal: string) => {
+    console.log(`\n${signal} received. Shutting down gracefully...`);
+    httpServer.close(async () => {
+      console.log('HTTP server closed.');
+      
+      // Shutdown the auction service
+      if (auctionService) {
+        auctionService.shutdown();
+        auctionService = null;
+        console.log('Auction service stopped.');
+      }
+      
+      await apolloServer.stop(); // Stop Apollo Server
+      console.log('Apollo server stopped.');
+      await closePostgresPool();
+      console.log('Database connections closed.');
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error('Graceful shutdown timed out. Forcing exit.');
+      process.exit(1);
+    }, 15000); // Increased timeout slightly for multiple services
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Start the HTTP server
+  await new Promise<void>((resolve) => httpServer.listen({ port }, resolve));
+  console.log(`🚀 Server ready at http://localhost:${port}`);
+  console.log(`🚀 GraphQL ready at http://localhost:${port}/graphql`);
+  console.log(`🚀 WebSocket ready for bidding`);
 }
 
-// Export the Express app for testing purposes
-export { app }; 
+// Start the server if this file is run directly
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
+} 
