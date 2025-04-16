@@ -26,7 +26,10 @@ module.exports = {
       statements: 70
     }
   },
-  setupFilesAfterEnv: ['<rootDir>/src/backend/tests/jest.setup.js'],
+  setupFilesAfterEnv: [
+    '<rootDir>/src/backend/tests/jest.setup.js',
+    '<rootDir>/src/frontend/tests/jest.setup.ts'
+  ],
   globals: {
     'ts-jest': {
       isolatedModules: true
