@@ -1,0 +1,12 @@
+# Base Query type
+type Query {
+  _empty: String # Placeholder field to ensure Query type is valid
+  hello: String # Simple test query
+}
+
+# Base Mutation type (can be added later)
+# type Mutation {
+#   _empty: String
+# }
+
+# Define other types (e.g., User, Certificate) here later 
