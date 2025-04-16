@@ -1,69 +1,32 @@
-# Tax Certificate Sale System
-
-A web application for managing tax certificate sales, designed for government entities and municipalities.
+# Florida Tax Certificate Auction System
 
 ## Overview
+This documentation provides comprehensive details about the Florida Tax Certificate Auction System. The system facilitates online tax certificate auctions for Florida counties, allowing counties to manage tax-delinquent properties and enabling registered bidders to participate in auctions.
 
-This system provides a platform for managing tax certificate sales, allowing users to:
-- Manage property tax certificates
-- Schedule and conduct online tax sales
-- Process payments and track transactions
-- Generate reports and analytics
-- Manage user accounts and permissions
+## Key Features
+- Online bidding platform for tax certificates
+- County administration portal for auction management
+- Bidder registration and management
+- Property and tax certificate tracking
+- Real-time auction monitoring
+- Comprehensive reporting and analytics
 
-## Features
-
-- User authentication and role-based access control
-- Property management and tax certificate tracking
-- Online auction and bidding system
-- Payment processing and financial reporting
-- Document generation and management
-- Responsive design for desktop and mobile devices
-
-## Technology Stack
-
-- Frontend: React.js
-- Backend: Node.js
-- Database: PostgreSQL
-- Authentication: JSON Web Tokens (JWT)
-- Deployment: Docker, Kubernetes
+## Documentation Structure
+- **[Architecture](./architecture/README.md)**: System architecture, design patterns, and technology stack
+- **[Components](./components/README.md)**: Reusable UI components and their properties
+- **[Pages](./pages/README.md)**: Application pages and their functionality
+- **[Data Model](./data-model/README.md)**: Database schema, entity relationships, and GraphQL schema
 
 ## Getting Started
+To run the application locally:
+```
+npm install
+npm run dev
+```
 
-### Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
-- PostgreSQL
-
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/visualgovsolutions/taxcertsale.git
-   cd taxcertsale
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Configure environment variables:
-   ```
-   cp .env.example .env
-   ```
-   Edit the `.env` file with your configuration.
-
-4. Start the development server:
-   ```
-   npm run dev
-   ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-Visual Government Solutions - [https://visualgovsolutions.com](https://visualgovsolutions.com) 
+## Development Environment
+- React + TypeScript
+- Tailwind CSS for styling
+- Prisma ORM for database operations
+- GraphQL API with Apollo Client
+- Vite for development and building 

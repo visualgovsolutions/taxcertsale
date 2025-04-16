@@ -110,24 +110,19 @@ This document outlines the testing strategy for the Florida Tax Certificate Sale
 ## 4. Test Environments
 
 ### 4.1 Development Environment
-- Purpose: Developer testing and feature verification
+- Purpose: Developer testing, unit testing, and integration testing
 - Deployment: Automatic on commit/PR
 - Data: Anonymized test data
 - Infrastructure: Containerized, minimal resources
 
-### 4.2 Integration Environment
-- Purpose: Testing service integrations and API contracts
-- Deployment: Daily from development branch
-- Data: Comprehensive test datasets
-- Infrastructure: Closer to production configuration
 
-### 4.3 Staging Environment
+### 4.2 Staging Environment
 - Purpose: End-to-end, performance, and UAT testing
 - Deployment: On-demand for major releases
 - Data: Production-like data volume with anonymization
 - Infrastructure: Production-equivalent setup
 
-### 4.4 Production Environment
+### 4.3 Production Environment
 - Purpose: Final verification and monitoring
 - Deployment: Scheduled releases after staging approval
 - Data: Production data
@@ -323,3 +318,4 @@ The testing strategy will be reviewed and updated quarterly based on:
    - County-specific configuration
    - Cross-county reporting
    - County administrator isolation
+- Integration tests run in Development environment before promoting to Staging
