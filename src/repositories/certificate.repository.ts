@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/database';
-import { Certificate, CertificateStatus } from '../models/entities';
+import { Certificate } from '../models/entities';
+import { CertificateStatus } from '../models/entities/certificate.entity';
 
 class CertificateRepository {
   private repository: Repository<Certificate>;

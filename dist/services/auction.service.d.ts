@@ -1,4 +1,5 @@
-import { Auction, AuctionStatus } from '../models/entities';
+import { Auction } from '../models/entities';
+import { AuctionStatus } from '../models/entities/auction.entity';
 export declare class AuctionService {
     findAll(): Promise<Auction[]>;
     findById(id: string): Promise<Auction | null>;

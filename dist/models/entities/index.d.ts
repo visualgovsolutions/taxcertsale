@@ -10,4 +10,4 @@ export { Property } from './property.entity';
 export { Certificate } from './certificate.entity';
 export { Auction } from './auction.entity';
 export { Bid } from './bid.entity';
-export declare const entities: (typeof User | typeof Bid | typeof Certificate | typeof Auction | typeof Property | typeof County)[];
+export declare const entities: (typeof User | typeof County | typeof Property | typeof Certificate | typeof Auction | typeof Bid)[];

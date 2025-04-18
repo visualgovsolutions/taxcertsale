@@ -1,4 +1,5 @@
-import { Certificate, CertificateStatus } from '../models/entities';
+import { Certificate } from '../models/entities';
+import { CertificateStatus } from '../models/entities/certificate.entity';
 export declare class CertificateService {
     findAll(): Promise<Certificate[]>;
     findById(id: string): Promise<Certificate | null>;

@@ -1,5 +1,5 @@
 import { auctionService } from '../services';
-import { AuctionStatus } from '../models/entities';
+import { AuctionStatus } from '../models/entities/auction.entity';
 import { Request, Response } from 'express';
 
 export const findAllAuctions = async (req: Request, res: Response) => {
@@ -16,7 +16,7 @@ export const findAllAuctions = async (req: Request, res: Response) => {
   }
 };
 
-export const findUpcomingAuctions = async (req: Request, res: Response) => {
+export const findUpcomingAuctions = async (_req: Request, res: Response) => {
   try {
     const auctions = await auctionService.findUpcoming();
     res.status(200).json(auctions);
@@ -188,7 +188,7 @@ export const findByStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const findActiveAuctions = async (req: Request, res: Response) => {
+export const findActiveAuctions = async (_req: Request, res: Response) => {
   try {
     const auctions = await auctionService.findActive();
     res.status(200).json(auctions);
@@ -199,7 +199,7 @@ export const findActiveAuctions = async (req: Request, res: Response) => {
   }
 };
 
-export const findCompletedAuctions = async (req: Request, res: Response) => {
+export const findCompletedAuctions = async (_req: Request, res: Response) => {
   try {
     const auctions = await auctionService.findCompleted();
     res.status(200).json(auctions);

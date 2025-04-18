@@ -2,9 +2,6 @@ import { Connection } from 'typeorm';
 import { User } from '../models/entities/user.entity';
 import { UserRole } from '../models/entities/user.entity';
 import { County } from '../models/entities/county.entity';
-import { Property } from '../models/entities/property.entity';
-import { Auction, AuctionStatus } from '../models/entities/auction.entity';
-import { Certificate, CertificateStatus } from '../models/entities/certificate.entity';
 
 export class InitialDataSeed {
   private connection: Connection;
@@ -140,11 +137,7 @@ export class InitialDataSeed {
     console.log('Counties seeded successfully');
   }
 
-  private async seedPropertiesAndCertificates(): Promise<void> {
-    // This can be implemented to seed properties, auctions, and certificates
-    // For a larger application, we recommend separating this into different methods
-    console.log('Property and certificate seeding not implemented yet');
-  }
+  // Removed unused method seedPropertiesAndCertificates
 }
 
 // Function to execute seeds

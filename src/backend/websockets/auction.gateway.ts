@@ -13,7 +13,22 @@ export function setupAuctionGateway(server: http.Server) {
     },
   });
 
+  io.use((socket, next) => {
+    // Simulate authentication: require a 'token' in handshake query
+    const token = socket.handshake.query.token;
+    if (!token) {
+      return next(new Error('Authentication token required'));
+    }
+    // In real app, verify token here
+    next();
+  });
+
   io.on('connection', (socket: Socket) => {
+    if (!socket.handshake.query.token) {
+      socket.emit('authError', { message: 'Authentication required' });
+      socket.disconnect();
+      return;
+    }
     console.log(`AuctionGateway: Client connected: ${socket.id}`);
 
     // Join auction room

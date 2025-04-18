@@ -5,6 +5,5 @@ export declare class InitialDataSeed {
     run(): Promise<void>;
     private seedUsers;
     private seedCounties;
-    private seedPropertiesAndCertificates;
 }
 export declare function seed(connection: Connection): Promise<void>;

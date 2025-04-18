@@ -1,5 +1,6 @@
 import { auctionRepository } from '../repositories';
-import { Auction, AuctionStatus } from '../models/entities';
+import { Auction } from '../models/entities';
+import { AuctionStatus } from '../models/entities/auction.entity';
 
 export class AuctionService {
   async findAll(): Promise<Auction[]> {

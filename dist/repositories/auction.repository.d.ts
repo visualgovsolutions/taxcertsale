@@ -1,4 +1,5 @@
-import { Auction, AuctionStatus } from '../models/entities';
+import { Auction } from '../models/entities';
+import { AuctionStatus } from '../models/entities/auction.entity';
 declare class AuctionRepository {
     private repository;
     constructor();

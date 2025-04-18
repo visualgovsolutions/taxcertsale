@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import http from 'http'; // Import http module
-import { Server } from 'socket.io'; // Import Socket.io
 import config from '../config/index';
 import mainRouter from './routes/index'; // Import main router
 import { closePostgresPool, getPostgresPool } from '../database/postgresPool'; // Import pool functions
@@ -10,6 +9,7 @@ import globalErrorHandler from './middleware/errorMiddleware'; // Import error h
 import { createApolloServer, createApolloMiddleware } from './graphql'; // Import Apollo setup
 import { json } from 'body-parser'; // Import json body parser specifically for GraphQL endpoint
 import { AuctionService } from './services/auction/AuctionService'; // Import Auction Service
+import { setupAuctionGateway } from './websockets/auction.gateway'; // Import the new auction gateway
 
 // Global variable to store the auction service instance
 let auctionService: AuctionService | null = null;
@@ -44,17 +44,13 @@ async function startServer() {
   const port = config.server.port;
   const httpServer = http.createServer(app);
 
-  // Initialize Socket.io
-  const io = new Server(httpServer, {
-    cors: {
-      origin: '*', // TODO: Configure this more restrictively in production
-      methods: ['GET', 'POST'],
-    },
-  });
+  // Initialize Auction WebSocket Gateway
+  const auctionIo = setupAuctionGateway(httpServer);
+  console.log('Auction WebSocket Gateway initialized.');
 
   // Initialize the auction service
   const pool = getPostgresPool();
-  auctionService = new AuctionService(io, pool);
+  auctionService = new AuctionService(auctionIo, pool);
   auctionService.initialize();
 
   // Initialize Apollo Server

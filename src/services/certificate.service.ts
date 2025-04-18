@@ -1,5 +1,6 @@
 import { certificateRepository } from '../repositories';
-import { Certificate, CertificateStatus } from '../models/entities';
+import { Certificate } from '../models/entities';
+import { CertificateStatus } from '../models/entities/certificate.entity';
 
 export class CertificateService {
   async findAll(): Promise<Certificate[]> {

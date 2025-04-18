@@ -1,6 +1,7 @@
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { AppDataSource } from '../config/database';
-import { Auction, AuctionStatus } from '../models/entities';
+import { Auction } from '../models/entities';
+import { AuctionStatus } from '../models/entities/auction.entity';
 
 class AuctionRepository {
   private repository: Repository<Auction>;
