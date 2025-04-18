@@ -11,51 +11,62 @@ import {
 import { Certificate } from './certificate.entity';
 import { County } from './county.entity';
 
+export enum AuctionStatus {
+  UPCOMING = 'upcoming',
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
+
 @Entity('auctions')
 export class Auction {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 100 })
-  name: string;
+  name!: string;
 
   @Column({ type: 'date' })
-  auctionDate: Date;
+  auctionDate!: Date;
+
+  @Column({ type: 'time' })
+  startTime!: string;
 
   @Column({ type: 'time', nullable: true })
-  startTime: string;
+  endTime!: string;
 
-  @Column({ type: 'time', nullable: true })
-  endTime: string;
-
-  @Column({ type: 'varchar', length: 20 })
-  status: string;
+  @Column({
+    type: 'enum',
+    enum: AuctionStatus,
+    default: AuctionStatus.UPCOMING,
+  })
+  status!: AuctionStatus;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description!: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  location: string;
+  @Column({ type: 'text', nullable: true })
+  location!: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  registrationUrl: string;
+  @Column({ type: 'text', nullable: true })
+  registrationUrl!: string;
 
-  @Column({ type: 'simple-json', nullable: true })
-  metadata: Record<string, any>;
+  @Column({ nullable: true, type: 'jsonb' })
+  metadata!: Record<string, any>;
 
   @Column({ type: 'uuid' })
-  countyId: string;
+  countyId!: string;
 
   @ManyToOne(() => County, county => county.auctions)
   @JoinColumn({ name: 'countyId' })
-  county: County;
+  county!: County;
 
   @OneToMany(() => Certificate, certificate => certificate.auction)
-  certificates: Certificate[];
+  certificates!: Certificate[];
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
