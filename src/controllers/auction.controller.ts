@@ -8,6 +8,10 @@ import {
   Delete,
   Query,
   UseGuards,
+  Put,
+  HttpStatus,
+  HttpCode,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AuctionService } from '../services/auction.service';
 import { CreateAuctionDto } from '../dtos/create-auction.dto';
@@ -16,18 +20,22 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 import { Role } from '../models/enums/role.enum';
+import { Auction } from '../models/entities/auction.entity';
 
 @Controller('auctions')
 export class AuctionController {
   constructor(private readonly auctionService: AuctionService) {}
 
   @Get()
-  findAll() {
+  async findAll(@Query('county') countyId?: string): Promise<Auction[]> {
+    if (countyId) {
+      return this.auctionService.findByCounty(countyId);
+    }
     return this.auctionService.findAll();
   }
 
   @Get('upcoming')
-  findUpcoming() {
+  async findUpcoming(): Promise<Auction[]> {
     return this.auctionService.findUpcoming();
   }
 
@@ -36,13 +44,8 @@ export class AuctionController {
     return this.auctionService.search(searchTerm);
   }
 
-  @Get('county/:id')
-  findByCounty(@Param('id') id: string) {
-    return this.auctionService.findByCounty(id);
-  }
-
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Auction> {
     return this.auctionService.findOne(id);
   }
 
@@ -54,21 +57,40 @@ export class AuctionController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  create(@Body() createAuctionDto: CreateAuctionDto) {
-    return this.auctionService.create(createAuctionDto);
+  async create(@Body() auctionData: Partial<Auction>): Promise<Auction> {
+    return this.auctionService.create(auctionData);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  update(@Param('id') id: string, @Body() updateAuctionDto: UpdateAuctionDto) {
-    return this.auctionService.update(id, updateAuctionDto);
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() auctionData: Partial<Auction>
+  ): Promise<Auction> {
+    return this.auctionService.update(id, auctionData);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     return this.auctionService.remove(id);
+  }
+
+  @Post(':id/start')
+  async startAuction(@Param('id', new ParseUUIDPipe()) id: string): Promise<Auction> {
+    return this.auctionService.startAuction(id);
+  }
+
+  @Post(':id/end')
+  async endAuction(@Param('id', new ParseUUIDPipe()) id: string): Promise<Auction> {
+    return this.auctionService.endAuction(id);
+  }
+
+  @Post(':id/cancel')
+  async cancelAuction(@Param('id', new ParseUUIDPipe()) id: string): Promise<Auction> {
+    return this.auctionService.cancelAuction(id);
   }
 }
