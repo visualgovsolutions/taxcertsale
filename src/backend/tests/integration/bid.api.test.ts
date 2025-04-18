@@ -1,9 +1,10 @@
 import request from 'supertest';
-import { app } from '../../server';
+import { createTestServer } from '../../server';
 import { BidStatus } from '../../../models/entities/bid.entity';
 
 describe('Bid API Integration', () => {
   let createdBidId: string;
+  let app: any;
   const testBid = {
     userId: '00000000-0000-0000-0000-000000000001',
     certificateId: '00000000-0000-0000-0000-000000000002',
@@ -12,6 +13,10 @@ describe('Bid API Integration', () => {
     interestRate: 10,
     notes: 'Integration test bid',
   };
+
+  beforeAll(async () => {
+    app = await createTestServer();
+  });
 
   it('should create a new bid', async () => {
     const res = await request(app).post('/bids').send(testBid).expect(201);
