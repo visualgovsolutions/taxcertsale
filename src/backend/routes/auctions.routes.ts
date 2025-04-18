@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { getPostgresPool } from '../../database/postgresPool';
 import { AuctionService } from '../services/auction/AuctionService';
+import { Server } from 'socket.io';
 
 const router = Router();
 const pool = getPostgresPool();
-const auctionService = new AuctionService(null, pool);
+
+// Create a dummy Socket.io server for use with the AuctionService
+// This is temporary until we refactor to better separate the WebSocket and REST functionality
+const dummyIo = {
+  emit: () => {},
+  on: () => {},
+  to: () => ({ emit: () => {} }),
+} as unknown as Server;
+
+const auctionService = new AuctionService(dummyIo, pool);
 
 // Get all auctions
 router.get('/', async (_req: Request, res: Response) => {
@@ -31,7 +41,11 @@ router.get('/upcoming', async (_req: Request, res: Response) => {
 // Get auction by ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Auction ID is required' });
+    }
+
     const auction = await auctionService.getAuctionById(id);
 
     if (!auction) {
@@ -60,7 +74,11 @@ router.post('/', async (req: Request, res: Response) => {
 // Update auction
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Auction ID is required' });
+    }
+
     const auctionData = req.body;
     const updatedAuction = await auctionService.updateAuction(id, auctionData);
 
@@ -78,7 +96,11 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Delete auction
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Auction ID is required' });
+    }
+
     const result = await auctionService.deleteAuction(id);
 
     if (!result) {
@@ -95,8 +117,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // Start auction
 router.post('/:id/start', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Auction ID is required' });
+    }
+
     const auction = await auctionService.startAuction(id);
+
+    if (!auction) {
+      return res.status(404).json({ message: `Auction with ID ${id} not found` });
+    }
+
     res.status(200).json(auction);
   } catch (error) {
     console.error('Error starting auction:', error);
@@ -107,8 +138,17 @@ router.post('/:id/start', async (req: Request, res: Response) => {
 // End auction
 router.post('/:id/end', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ message: 'Auction ID is required' });
+    }
+
     const auction = await auctionService.endAuction(id);
+
+    if (!auction) {
+      return res.status(404).json({ message: `Auction with ID ${id} not found` });
+    }
+
     res.status(200).json(auction);
   } catch (error) {
     console.error('Error ending auction:', error);
