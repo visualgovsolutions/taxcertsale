@@ -8,8 +8,8 @@ import {
   HiInformationCircle,
   HiExternalLink,
 } from 'react-icons/hi';
-import { format } from 'date-fns';
-import axios from 'axios';
+// import { format } from 'date-fns';
+// import axios from 'axios';
 
 interface Certificate {
   id: string;
@@ -56,8 +56,61 @@ const AuctionDetailPage: React.FC = () => {
     const fetchAuction = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/v1/auctions/${id}/certificates`);
-        setAuction(response.data);
+        // Commented out axios call
+        // const response = await axios.get(`/api/v1/auctions/${id}/certificates`);
+        // setAuction(response.data);
+
+        // Using mock data instead
+        const mockAuction: Auction = {
+          id: id || '1',
+          name: 'Miami-Dade County Tax Certificate Auction',
+          auctionDate: '2024-08-15',
+          startTime: '10:00 AM',
+          endTime: '4:00 PM',
+          status: 'scheduled',
+          description:
+            'Annual tax certificate auction for Miami-Dade County properties with delinquent taxes. Certificates are sold to investors who pay the delinquent taxes in exchange for a competitive bid interest rate.',
+          location: 'Online via Miami-Dade County Tax Collector Website',
+          registrationUrl: 'https://www.miamidade.gov/taxcollector',
+          county: {
+            id: '1',
+            name: 'Miami-Dade',
+            state: 'FL',
+          },
+          certificates: [
+            {
+              id: '101',
+              certificateNumber: 'MD-2024-001',
+              faceValue: 5000.0,
+              interestRate: 18.0,
+              status: 'available',
+              property: {
+                id: '1001',
+                parcelId: '01-1234-567-8901',
+                address: '123 Ocean Drive',
+                city: 'Miami Beach',
+                zipCode: '33139',
+              },
+            },
+            {
+              id: '102',
+              certificateNumber: 'MD-2024-002',
+              faceValue: 3200.5,
+              interestRate: 16.0,
+              status: 'available',
+              property: {
+                id: '1002',
+                parcelId: '01-2345-678-9012',
+                address: '456 Palm Avenue',
+                city: 'Miami',
+                zipCode: '33133',
+              },
+            },
+          ],
+          metadata: {},
+        };
+
+        setAuction(mockAuction);
         setLoading(false);
       } catch (err) {
         setError('Failed to load auction details. Please try again later.');
@@ -71,8 +124,13 @@ const AuctionDetailPage: React.FC = () => {
   }, [id]);
 
   const formatDate = (dateString: string) => {
+    // Commented out date-fns usage
+    // const date = new Date(dateString);
+    // return format(date, 'MMMM d, yyyy');
+
+    // Using basic JS Date formatting instead
     const date = new Date(dateString);
-    return format(date, 'MMMM d, yyyy');
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const getStatusBadge = (status: string) => {

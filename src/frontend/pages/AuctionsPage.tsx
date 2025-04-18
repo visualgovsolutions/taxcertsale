@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Table, Badge, Button, Spinner, TextInput } from 'flowbite-react';
 import { HiSearch, HiCalendar, HiLocationMarker } from 'react-icons/hi';
-import { format } from 'date-fns';
-import axios from 'axios';
+// import { format } from 'date-fns';
+// import axios from 'axios';
 
 interface Auction {
   id: string;
@@ -32,9 +32,36 @@ const AuctionsPage: React.FC = () => {
     const fetchAuctions = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/v1/auctions');
-        setAuctions(response.data);
-        setFilteredAuctions(response.data);
+        // Commented out axios call
+        // const response = await axios.get('/api/v1/auctions');
+        // setAuctions(response.data);
+        // setFilteredAuctions(response.data);
+
+        // Using mock data instead
+        const mockData: Auction[] = [
+          {
+            id: '1',
+            name: 'Miami-Dade County Tax Certificate Auction',
+            auctionDate: '2024-08-15',
+            startTime: '10:00 AM',
+            endTime: '4:00 PM',
+            status: 'scheduled',
+            location: 'Online',
+            county: { id: '1', name: 'Miami-Dade' },
+          },
+          {
+            id: '2',
+            name: 'Broward County Tax Certificate Auction',
+            auctionDate: '2024-09-01',
+            startTime: '9:00 AM',
+            endTime: '5:00 PM',
+            status: 'scheduled',
+            location: 'Online',
+            county: { id: '2', name: 'Broward' },
+          },
+        ];
+        setAuctions(mockData);
+        setFilteredAuctions(mockData);
         setLoading(false);
       } catch (err) {
         setError('Failed to load auctions. Please try again later.');
@@ -83,8 +110,13 @@ const AuctionsPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
+    // Commented out date-fns usage
+    // const date = new Date(dateString);
+    // return format(date, 'MMM d, yyyy');
+
+    // Using basic JS Date formatting instead
     const date = new Date(dateString);
-    return format(date, 'MMM d, yyyy');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
