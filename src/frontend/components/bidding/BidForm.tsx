@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BiddingSocketService } from '../../services/socket/BiddingSocketService';
+import { BiddingSocketService } from '../../services/websockets/BiddingSocketService';
 
 interface Certificate {
   id: string;
@@ -13,11 +13,10 @@ interface Certificate {
 
 interface BidFormProps {
   certificate: Certificate;
-  userId: string;
   onBidPlaced?: (bidAmount: number) => void;
 }
 
-const BidForm: React.FC<BidFormProps> = ({ certificate, userId, onBidPlaced }) => {
+const BidForm: React.FC<BidFormProps> = ({ certificate, onBidPlaced }) => {
   const [bidAmount, setBidAmount] = useState<number>(
     certificate.currentLowestBid ? certificate.currentLowestBid - 0.25 : 18.00
   );
@@ -25,6 +24,7 @@ const BidForm: React.FC<BidFormProps> = ({ certificate, userId, onBidPlaced }) =
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [socketService, setSocketService] = useState<BiddingSocketService | null>(null);
   
   // Maximum allowed bid rate is 18%
   const MAX_BID_RATE = 18.00;
@@ -64,6 +64,23 @@ const BidForm: React.FC<BidFormProps> = ({ certificate, userId, onBidPlaced }) =
     
     return () => clearInterval(timerId);
   }, [certificate.auctionEndTime, certificate.status]);
+  
+  useEffect(() => {
+    // Initialize socket connection when component mounts
+    const service = BiddingSocketService.getInstance();
+    setSocketService(service);
+
+    // Optional: Listen for specific events if needed
+    // service.listenForEvent('bid_confirmed', (data) => {
+    //   console.log('Bid confirmed:', data);
+    // });
+
+    return () => {
+      // Clean up socket connection when component unmounts
+      // Consider if singleton instance should truly disconnect here
+      // service.disconnect(); // Might disconnect for all users if singleton
+    };
+  }, []);
   
   // Handle bid amount change
   const handleBidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,16 +141,14 @@ const BidForm: React.FC<BidFormProps> = ({ certificate, userId, onBidPlaced }) =
     try {
       setIsSubmitting(true);
       
-      // Create bid object
-      const bid = {
-        certificateId: certificate.id,
-        bidderId: userId,
-        bidAmount: bidAmount,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Send bid via socket service
-      await BiddingSocketService.placeBid(bid);
+      // Use the socketService from state if available, otherwise get instance
+      if (socketService) {
+        await socketService.placeBid(certificate.id, bidAmount);
+      } else {
+        // Fallback to getting a new instance
+        const service = BiddingSocketService.getInstance();
+        await service.placeBid(certificate.id, bidAmount);
+      }
       
       // Show success message
       setSuccessMessage(`Bid of ${bidAmount}% placed successfully!`);

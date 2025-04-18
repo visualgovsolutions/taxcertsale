@@ -1,11 +1,11 @@
-import { Pool, PoolConfig } from 'pg';
-import config from '@config/index';
+import { Pool, PoolClient } from 'pg';
+import config from '../config/index';
 
 let pool: Pool | null = null;
 
-const getPostgresPool = (): Pool => {
+export const getPostgresPool = (): Pool => {
   if (!pool) {
-    const poolConfig: PoolConfig = {
+    const poolConfig = {
       user: config.db.user,
       host: config.db.host,
       database: config.db.database,
@@ -19,30 +19,30 @@ const getPostgresPool = (): Pool => {
     console.log(`Initializing PostgreSQL connection pool for database "${poolConfig.database}" on ${poolConfig.host}:${poolConfig.port}`);
     pool = new Pool(poolConfig);
 
-    pool.on('error', (err, _client) => {
+    pool.on('error', (err: Error, _client: PoolClient) => {
       console.error('Unexpected error on idle PostgreSQL client', err);
       // Optionally, implement logic to remove the client or handle the error
     });
 
-    pool.on('connect', (_client) => {
+    pool.on('connect', (_client: PoolClient) => {
       console.log(`PostgreSQL client connected from pool`);
       // You could set session parameters here if needed
       // client.query('SET DATESTYLE = iso, mdy');
     });
 
-    pool.on('acquire', (_client) => {
-        // console.log('PostgreSQL client acquired from pool');
+    pool.on('acquire', (_client: PoolClient) => {
+      // console.log('PostgreSQL client acquired from pool');
     });
 
-    pool.on('remove', (_client) => {
-       // console.log('PostgreSQL client removed from pool');
+    pool.on('remove', (_client: PoolClient) => {
+      // console.log('PostgreSQL client removed from pool');
     });
-
   }
+
   return pool;
 };
 
-const checkPostgresConnection = async (): Promise<boolean> => {
+export const checkPostgresConnection = async (): Promise<boolean> => {
   const poolInstance = getPostgresPool();
   try {
     const client = await poolInstance.connect();
@@ -57,17 +57,11 @@ const checkPostgresConnection = async (): Promise<boolean> => {
 };
 
 // Optional: Function to gracefully close the pool
-const closePostgresPool = async (): Promise<void> => {
+export const closePostgresPool = async (): Promise<void> => {
   if (pool) {
     console.log('Closing PostgreSQL connection pool...');
     await pool.end();
     pool = null;
     console.log('PostgreSQL connection pool closed.');
   }
-};
-
-export {
-  getPostgresPool,
-  checkPostgresConnection,
-  closePostgresPool
 }; 

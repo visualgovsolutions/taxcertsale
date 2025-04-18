@@ -1,0 +1,15 @@
+import { Request, Response } from 'express';
+export declare const findAllAuctions: (req: Request, res: Response) => Promise<void>;
+export declare const findUpcomingAuctions: (req: Request, res: Response) => Promise<void>;
+export declare const findAuctionById: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const findWithCertificates: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createAuction: (req: Request, res: Response) => Promise<void>;
+export declare const updateAuction: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const deleteAuction: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const activateAuction: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const completeAuction: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const cancelAuction: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const findByCounty: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const findByStatus: (req: Request, res: Response) => Promise<void>;
+export declare const findActiveAuctions: (req: Request, res: Response) => Promise<void>;
+export declare const findCompletedAuctions: (req: Request, res: Response) => Promise<void>;

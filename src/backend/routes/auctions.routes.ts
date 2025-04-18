@@ -21,9 +21,11 @@ router.get('/', async (_req: Request, res: Response) => {
   try {
     const auctions = await auctionService.getAllAuctions();
     res.status(200).json(auctions);
+    return;
   } catch (error) {
     console.error('Error fetching auctions:', error);
     res.status(500).json({ message: 'Failed to retrieve auctions' });
+    return;
   }
 });
 
@@ -32,9 +34,11 @@ router.get('/upcoming', async (_req: Request, res: Response) => {
   try {
     const auctions = await auctionService.getUpcomingAuctions();
     res.status(200).json(auctions);
+    return;
   } catch (error) {
     console.error('Error fetching upcoming auctions:', error);
     res.status(500).json({ message: 'Failed to retrieve upcoming auctions' });
+    return;
   }
 });
 
@@ -53,9 +57,11 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.status(200).json(auction);
+    return;
   } catch (error) {
     console.error('Error fetching auction:', error);
     res.status(500).json({ message: 'Failed to retrieve auction' });
+    return;
   }
 });
 
@@ -65,9 +71,11 @@ router.post('/', async (req: Request, res: Response) => {
     const auctionData = req.body;
     const newAuction = await auctionService.createAuction(auctionData);
     res.status(201).json(newAuction);
+    return;
   } catch (error) {
     console.error('Error creating auction:', error);
     res.status(500).json({ message: 'Failed to create auction' });
+    return;
   }
 });
 
@@ -87,9 +95,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     res.status(200).json(updatedAuction);
+    return;
   } catch (error) {
     console.error('Error updating auction:', error);
     res.status(500).json({ message: 'Failed to update auction' });
+    return;
   }
 });
 
@@ -108,9 +118,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
 
     res.status(204).send();
+    return;
   } catch (error) {
     console.error('Error deleting auction:', error);
     res.status(500).json({ message: 'Failed to delete auction' });
+    return;
   }
 });
 
@@ -129,9 +141,11 @@ router.post('/:id/start', async (req: Request, res: Response) => {
     }
 
     res.status(200).json(auction);
+    return;
   } catch (error) {
     console.error('Error starting auction:', error);
     res.status(500).json({ message: 'Failed to start auction' });
+    return;
   }
 });
 
@@ -150,9 +164,11 @@ router.post('/:id/end', async (req: Request, res: Response) => {
     }
 
     res.status(200).json(auction);
+    return;
   } catch (error) {
     console.error('Error ending auction:', error);
     res.status(500).json({ message: 'Failed to end auction' });
+    return;
   }
 });
 

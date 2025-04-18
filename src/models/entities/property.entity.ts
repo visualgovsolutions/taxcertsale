@@ -16,52 +16,70 @@ export class Property {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ length: 100 })
+  @Column({ unique: true })
   parcelId!: string;
 
-  @Column({ type: 'text' })
+  @Column()
   address!: string;
 
-  @Column({ type: 'text' })
-  city!: string;
+  @Column({ nullable: true })
+  city?: string;
 
-  @Column({ type: 'text', length: 2 })
-  state!: string;
+  @Column({ nullable: true })
+  state?: string;
 
-  @Column({ type: 'text', length: 10 })
-  zipCode!: string;
+  @Column({ nullable: true })
+  zipCode?: string;
 
-  @Column({ nullable: true, type: 'text' })
-  description!: string;
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  assessedValue?: number;
 
-  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 })
-  assessedValue!: number;
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  marketValue?: number;
 
-  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 })
-  marketValue!: number;
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  latitude?: number;
 
-  @Column({ nullable: true, type: 'text' })
-  ownerName!: string;
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  longitude?: number;
 
-  @Column({ nullable: true, type: 'jsonb' })
-  coordinates!: { latitude: number; longitude: number };
+  @Column({ type: 'varchar', nullable: true })
+  propertyType?: string;
 
-  @Column({ nullable: true, type: 'jsonb' })
-  metadata!: Record<string, any>;
+  @Column({ type: 'varchar', nullable: true })
+  zoning?: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  landArea?: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  buildingArea?: number;
+
+  @Column({ type: 'int', nullable: true })
+  yearBuilt?: number;
+
+  @Column({ type: 'varchar', nullable: true })
+  ownerName?: string;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any>;
+
+  @Column({ nullable: false })
   countyId!: string;
 
-  @CreateDateColumn()
-  createdAt!: Date;
-
-  @UpdateDateColumn()
-  updatedAt!: Date;
-
   @ManyToOne(() => County, county => county.properties)
-  @JoinColumn({ name: 'countyId' })
+  @JoinColumn({ name: 'county_id' })
   county!: County;
 
   @OneToMany(() => Certificate, certificate => certificate.property)
   certificates!: Certificate[];
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

@@ -6,7 +6,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import resolvers from './resolvers';
-import config from '@config/index';
+import config from '../../config/index';
 import { Request, Response } from 'express'; // Import Request and Response for context
 
 // Define context type (can be expanded later)

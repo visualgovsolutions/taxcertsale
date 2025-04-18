@@ -30,7 +30,7 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: ['style-loader', 'css-loader', 'postcss-loader'],
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -38,30 +38,45 @@ module.exports = {
       },
     ],
   },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: './public/index.html',
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        { 
-          from: 'public',
-          to: 'public',
-          globOptions: {
-            ignore: ['**/index.html'], // We don't need to copy index.html as HtmlWebpackPlugin already uses it
-          },
+  plugins: [new HtmlWebpackPlugin({
+    template: './public/index.html',
+  }), new CopyWebpackPlugin({
+    patterns: [
+      { 
+        from: 'public',
+        to: 'public',
+        globOptions: {
+          ignore: ['**/index.html'], // We don't need to copy index.html as HtmlWebpackPlugin already uses it
         },
-      ],
-    }),
-  ],
+      },
+    ],
+  })],
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),
     },
     historyApiFallback: true, // Important for React Router
-    port: 3000,
+    /**
+     * CRITICAL PORT CONFIGURATION:
+     * Port 8080: Webpack dev server (frontend)
+     * - Backend API server runs on 8081
+     * - If port 8080 is in use, try 4001 as an alternative
+     * - Port 4000 is reserved for legacy testing
+     * 
+     * IMPORTANT: Keep this in sync with src/config/index.ts
+     */
+    port: 8080,
     hot: true,
     open: true,
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:8081',
+        pathRewrite: { '^/api': '' },
+        secure: false,
+        changeOrigin: true,
+      }
+    ],
   },
   devtool: 'eval-source-map', // Good for development
-}; 
+};

@@ -4,7 +4,7 @@ import { setupTestEnvironment, clearDatabase } from '../setup';
 
 describe('E2E API Tests', () => {
   let teardown: () => Promise<void>;
-  let authToken: string;
+  // let authToken: string; // Comment out unused variable
 
   beforeAll(async () => {
     // Setup test environment and get teardown function

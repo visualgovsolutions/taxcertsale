@@ -2,7 +2,7 @@
   "compilerOptions": {
     /* Basic Options */
     "target": "ES2022" /* Specify ECMAScript target version */,
-    "module": "NodeNext" /* Specify module code generation */,
+    "module": "CommonJS" /* Specify module code generation */,
     "lib": ["ES2022", "DOM"] /* Specify library files to be included */,
     "jsx": "react-jsx" /* Support JSX in .tsx files for React */,
     "outDir": "./dist" /* Redirect output structure to the directory */,
@@ -11,6 +11,8 @@
     "sourceMap": true /* Generate corresponding .map files */,
     "removeComments": false /* Do not remove comments in output */,
     "incremental": true /* Enable incremental compilation */,
+    "emitDecoratorMetadata": true /* Enables experimental support for emitting type metadata for decorators */,
+    "experimentalDecorators": true /* Enables experimental support for ES7 decorators */,
 
     /* Strict Type-Checking Options */
     "strict": true /* Enable all strict type-checking options */,
@@ -30,7 +32,7 @@
     "noUncheckedIndexedAccess": true /* Include 'undefined' in index signature results */,
 
     /* Module Resolution Options */
-    "moduleResolution": "NodeNext" /* Specify module resolution strategy */,
+    "moduleResolution": "node" /* Specify module resolution strategy */,
     "baseUrl": "." /* Base directory to resolve non-absolute module names */,
     "paths": {
       "@/*": ["src/*"],
@@ -58,12 +60,18 @@
     /* Advanced Options */
     "skipLibCheck": true /* Skip type checking of declaration files */,
     "forceConsistentCasingInFileNames": true /* Ensure case sensitivity is enforced */,
-    "useDefineForClassFields": true /* Use modern JavaScript runtime semantics for class fields */
+    "useDefineForClassFields": true, /* Use modern JavaScript runtime semantics for class fields */
+    
+    /* Ensure JS files are emitted */
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": false
   },
-  "include": ["src/**/*", ".eslintrc.js", "jest.config.js"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "coverage"],
   "ts-node": {
     "swc": true,
-    "transpileOnly": true
+    "transpileOnly": true,
+    "require": ["tsconfig-paths/register"]
   }
 }

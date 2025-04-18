@@ -1,0 +1,644 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuctionService = void 0;
+const Certificate_1 = require("../../models/certificate/Certificate");
+const Bid_1 = require("../../models/certificate/Bid");
+const CertificateBatch_1 = require("../../models/certificate/CertificateBatch");
+/**
+ * Auction Service Class
+ */
+class AuctionService {
+    io;
+    pool;
+    certificateService;
+    bidService;
+    batchService;
+    activeAuctions;
+    connectedUsers;
+    heartbeatInterval = null;
+    constructor(io, pool) {
+        this.io = io;
+        this.pool = pool;
+        this.certificateService = new Certificate_1.CertificateService(pool);
+        this.bidService = new Bid_1.BidService(pool);
+        this.batchService = new CertificateBatch_1.CertificateBatchService(pool);
+        this.activeAuctions = new Map();
+        this.connectedUsers = new Map(); // Map of userId to Set of socketIds
+    }
+    /**
+     * Initialize the auction service
+     */
+    initialize() {
+        this.setupSocketHandlers();
+        this.startHeartbeat();
+        this.startBatchProcessing();
+        // Initialize active auctions from database
+        this.initializeActiveAuctions().catch(err => {
+            console.error('Failed to initialize active auctions:', err);
+        });
+    }
+    /**
+     * Start auction service heartbeat
+     */
+    startHeartbeat() {
+        // Send heartbeat every 30 seconds to ensure connections stay alive
+        this.heartbeatInterval = setInterval(() => {
+            this.io.emit('auction:heartbeat', { timestamp: new Date() });
+        }, 30000);
+    }
+    /**
+     * Setup WebSocket event handlers
+     */
+    setupSocketHandlers() {
+        this.io.on('connection', (socket) => {
+            console.log(`Client connected: ${socket.id}`);
+            // Handle authentication
+            socket.on('auction:authenticate', (data) => {
+                // TODO: Add proper authentication validation
+                if (data.userId && data.token) {
+                    this.handleUserConnection(socket, data.userId);
+                }
+                else {
+                    socket.emit('auction:error', { message: 'Authentication failed' });
+                    socket.disconnect(true);
+                }
+            });
+            // Handle joining auction room
+            socket.on('auction:join', (data) => {
+                if (!data.certificateId) {
+                    socket.emit('auction:error', { message: 'Certificate ID is required' });
+                    return;
+                }
+                // Join the auction room
+                socket.join(`certificate:${data.certificateId}`);
+                console.log(`Socket ${socket.id} joined auction for certificate ${data.certificateId}`);
+                // Send current auction state
+                this.sendAuctionState(data.certificateId);
+            });
+            // Handle leaving auction room
+            socket.on('auction:leave', (data) => {
+                if (data.certificateId) {
+                    socket.leave(`certificate:${data.certificateId}`);
+                    console.log(`Socket ${socket.id} left auction for certificate ${data.certificateId}`);
+                }
+            });
+            // Handle bid placement
+            socket.on('auction:place-bid', async (data) => {
+                // Validate the user is authenticated
+                const userId = this.getUserIdFromSocket(socket);
+                if (!userId) {
+                    socket.emit('auction:error', { message: 'Not authenticated' });
+                    return;
+                }
+                // Validate the bid
+                const validation = await this.validateBid(data, userId);
+                if (!validation.valid) {
+                    socket.emit('auction:bid-rejected', {
+                        certificateId: data.certificateId,
+                        message: validation.message,
+                    });
+                    return;
+                }
+                // Process the bid
+                try {
+                    const bid = await this.processBid(data, userId);
+                    // Notify all users in the auction room
+                    this.io.to(`certificate:${data.certificateId}`).emit('auction:bid-placed', {
+                        certificateId: data.certificateId,
+                        bidId: bid.id,
+                        bidderId: bid.bidderId,
+                        interestRate: bid.interestRate,
+                        timestamp: bid.timestamp,
+                    });
+                    // Update auction data
+                    this.updateAuctionData(data.certificateId, bid.interestRate, bid.bidderId, bid.timestamp);
+                    // Send updated auction state
+                    this.sendAuctionState(data.certificateId);
+                    // Notify bidder of successful bid
+                    socket.emit('auction:bid-accepted', {
+                        certificateId: data.certificateId,
+                        bidId: bid.id,
+                        interestRate: bid.interestRate,
+                    });
+                }
+                catch (error) {
+                    console.error('Bid processing error:', error);
+                    socket.emit('auction:error', {
+                        message: 'An error occurred while processing your bid',
+                    });
+                }
+            });
+            // Handle disconnection
+            socket.on('disconnect', () => {
+                this.handleUserDisconnection(socket);
+                console.log(`Client disconnected: ${socket.id}`);
+            });
+        });
+    }
+    /**
+     * Handle user connection
+     */
+    handleUserConnection(socket, userId) {
+        // Store the user's socket
+        if (!this.connectedUsers.has(userId)) {
+            this.connectedUsers.set(userId, new Set());
+        }
+        this.connectedUsers.get(userId)?.add(socket.id);
+        // Associate the user ID with the socket
+        socket.data.userId = userId;
+        // Send confirmation
+        socket.emit('auction:authenticated', { userId });
+        console.log(`User ${userId} authenticated on socket ${socket.id}`);
+    }
+    /**
+     * Handle user disconnection
+     */
+    handleUserDisconnection(socket) {
+        const userId = this.getUserIdFromSocket(socket);
+        if (userId && this.connectedUsers.has(userId)) {
+            // Remove this socket from the user's set
+            this.connectedUsers.get(userId)?.delete(socket.id);
+            // If no more sockets for this user, remove the user entry
+            if (this.connectedUsers.get(userId)?.size === 0) {
+                this.connectedUsers.delete(userId);
+            }
+        }
+    }
+    /**
+     * Get user ID from socket
+     */
+    getUserIdFromSocket(socket) {
+        return socket.data.userId;
+    }
+    /**
+     * Validate a bid
+     */
+    async validateBid(bid, userId) {
+        // Verify the bidder ID matches the authenticated user
+        if (bid.bidderId !== userId) {
+            return { valid: false, message: 'Bidder ID does not match authenticated user' };
+        }
+        // Verify the certificate exists and is in active auction
+        const certificate = await this.certificateService.getCertificateById(bid.certificateId);
+        if (!certificate) {
+            return { valid: false, message: 'Certificate not found' };
+        }
+        if (certificate.status !== Certificate_1.CertificateStatus.AUCTION_ACTIVE) {
+            return { valid: false, message: 'Certificate is not in active auction' };
+        }
+        // Check if the batch is active
+        if (certificate.batchId) {
+            const batch = await this.batchService.getBatchById(certificate.batchId);
+            if (!batch || batch.status !== CertificateBatch_1.BatchStatus.ACTIVE) {
+                return { valid: false, message: 'Certificate batch is not active' };
+            }
+        }
+        // Validate interest rate bounds (Florida rules)
+        if (bid.interestRate > 18) {
+            return { valid: false, message: 'Interest rate cannot exceed 18%' };
+        }
+        if (bid.interestRate < 0) {
+            return { valid: false, message: 'Interest rate cannot be negative' };
+        }
+        if (bid.interestRate !== 0 && bid.interestRate < 5) {
+            return { valid: false, message: 'Interest rate must be at least 5% or exactly 0%' };
+        }
+        // Check if the bid is lower than current lowest bid
+        const auctionData = this.activeAuctions.get(bid.certificateId);
+        if (auctionData && auctionData.lowestBid !== null) {
+            if (bid.interestRate >= auctionData.lowestBid) {
+                return {
+                    valid: false,
+                    message: `Bid must be lower than current lowest bid (${auctionData.lowestBid}%)`,
+                };
+            }
+        }
+        return { valid: true };
+    }
+    /**
+     * Process a new bid
+     */
+    async processBid(bid, userId) {
+        // Start a database transaction
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            // Create the bid record
+            const newBid = await this.bidService.placeBid({
+                certificateId: bid.certificateId,
+                bidderId: userId,
+                interestRate: bid.interestRate,
+                ipAddress: bid.ipAddress,
+                userAgent: bid.userAgent,
+            });
+            // Mark previous bids as outbid
+            await this.bidService.updateBidsToOutbid(bid.certificateId, newBid.id);
+            // Mark this bid as winning
+            await this.bidService.updateBidStatus(newBid.id, Bid_1.BidStatus.WINNING);
+            await client.query('COMMIT');
+            return newBid;
+        }
+        catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        }
+        finally {
+            client.release();
+        }
+    }
+    /**
+     * Update auction data when a new bid is placed
+     */
+    updateAuctionData(certificateId, interestRate, bidderId, timestamp) {
+        const auctionData = this.activeAuctions.get(certificateId) || {
+            certificateId,
+            lowestBid: null,
+            lowestBidder: null,
+            bidCount: 0,
+            lastBidTime: null,
+        };
+        auctionData.lowestBid = interestRate;
+        auctionData.lowestBidder = bidderId;
+        auctionData.bidCount++;
+        auctionData.lastBidTime = timestamp;
+        this.activeAuctions.set(certificateId, auctionData);
+    }
+    /**
+     * Send current auction state to clients
+     */
+    async sendAuctionState(certificateId) {
+        const auctionData = this.activeAuctions.get(certificateId);
+        if (!auctionData) {
+            // If we don't have cached data, try to get it from the database
+            try {
+                const lowestBid = await this.bidService.getLowestBidForCertificate(certificateId);
+                const bids = await this.bidService.getBidsForCertificate(certificateId);
+                const stateData = {
+                    certificateId,
+                    lowestBid: lowestBid ? lowestBid.interestRate : null,
+                    lowestBidder: lowestBid ? lowestBid.bidderId : null,
+                    bidCount: bids.length,
+                    lastBidTime: lowestBid ? lowestBid.timestamp : null,
+                };
+                this.io.to(`certificate:${certificateId}`).emit('auction:state', stateData);
+            }
+            catch (error) {
+                console.error(`Error fetching auction state for certificate ${certificateId}:`, error);
+            }
+        }
+        else {
+            // Send the cached auction data
+            this.io.to(`certificate:${certificateId}`).emit('auction:state', auctionData);
+        }
+    }
+    /**
+     * Initialize active auctions from the database
+     */
+    async initializeActiveAuctions() {
+        // Get all certificates in active auction
+        const client = await this.pool.connect();
+        try {
+            const result = await client.query(`
+        SELECT c.id as certificate_id, 
+               b.id as bid_id, 
+               b.user_id,
+               b.interest_rate, 
+               b.timestamp,
+               (SELECT COUNT(*) FROM bids WHERE certificate_id = c.id) as bid_count
+        FROM certificates c
+        LEFT JOIN bids b ON b.certificate_id = c.id AND b.status = $1
+        WHERE c.status = $2
+        ORDER BY b.interest_rate ASC, b.timestamp ASC
+      `, [Bid_1.BidStatus.WINNING, Certificate_1.CertificateStatus.AUCTION_ACTIVE]);
+            // Group by certificate and take the lowest bid for each
+            const certificates = new Map();
+            for (const row of result.rows) {
+                if (!certificates.has(row.certificate_id)) {
+                    certificates.set(row.certificate_id, row);
+                }
+            }
+            // Initialize auction data for each certificate
+            for (const [certificateId, row] of certificates.entries()) {
+                this.activeAuctions.set(certificateId, {
+                    certificateId,
+                    lowestBid: row.bid_id ? parseFloat(row.interest_rate) : null,
+                    lowestBidder: row.user_id || null,
+                    bidCount: parseInt(row.bid_count, 10),
+                    lastBidTime: row.timestamp ? new Date(row.timestamp) : null,
+                });
+            }
+            console.log(`Initialized ${this.activeAuctions.size} active auctions`);
+        }
+        catch (error) {
+            console.error('Error initializing active auctions:', error);
+        }
+        finally {
+            client.release();
+        }
+    }
+    /**
+     * Start batch processing
+     */
+    startBatchProcessing() {
+        // Check for batches that need to be activated or closed every minute
+        setInterval(async () => {
+            try {
+                await this.processBatches();
+            }
+            catch (error) {
+                console.error('Error processing batches:', error);
+            }
+        }, 60000);
+    }
+    /**
+     * Process certificate batches
+     */
+    async processBatches() {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            // Get scheduled batches that should be activated
+            const batchesToActivate = await this.batchService.getScheduledBatchesToActivate();
+            for (const batch of batchesToActivate) {
+                // Update batch status
+                await this.batchService.updateBatchStatus(batch.id, CertificateBatch_1.BatchStatus.ACTIVE);
+                // Update certificate statuses
+                for (const certificateId of batch.certificates) {
+                    await this.certificateService.updateCertificateStatus(certificateId, Certificate_1.CertificateStatus.AUCTION_ACTIVE);
+                    // Initialize auction data
+                    if (!this.activeAuctions.has(certificateId)) {
+                        this.activeAuctions.set(certificateId, {
+                            certificateId,
+                            lowestBid: null,
+                            lowestBidder: null,
+                            bidCount: 0,
+                            lastBidTime: null,
+                        });
+                    }
+                    // Notify clients that the auction is active
+                    this.io.emit('auction:started', { certificateId });
+                }
+                console.log(`Activated batch ${batch.id} with ${batch.certificates.length} certificates`);
+            }
+            // Get active batches that should be closed
+            const batchesToClose = await this.batchService.getActiveBatchesToClose();
+            for (const batch of batchesToClose) {
+                // Update batch status
+                await this.batchService.updateBatchStatus(batch.id, CertificateBatch_1.BatchStatus.CLOSED);
+                // Process each certificate in the batch
+                for (const certificateId of batch.certificates) {
+                    // Get the winning bid
+                    const lowestBid = await this.bidService.getLowestBidForCertificate(certificateId);
+                    if (lowestBid) {
+                        // Update certificate with winning bid
+                        await this.certificateService.updateCertificateAfterBid(certificateId, lowestBid.bidderId, lowestBid.interestRate);
+                        // Notify clients of auction end with winner
+                        this.io.emit('auction:ended', {
+                            certificateId,
+                            winner: lowestBid.bidderId,
+                            interestRate: lowestBid.interestRate,
+                        });
+                    }
+                    else {
+                        // No bids, update certificate status to closed
+                        await this.certificateService.updateCertificateStatus(certificateId, Certificate_1.CertificateStatus.AUCTION_CLOSED);
+                        // Notify clients of auction end with no winner
+                        this.io.emit('auction:ended', {
+                            certificateId,
+                            winner: null,
+                        });
+                    }
+                    // Remove from active auctions
+                    this.activeAuctions.delete(certificateId);
+                }
+                console.log(`Closed batch ${batch.id} with ${batch.certificates.length} certificates`);
+            }
+            await client.query('COMMIT');
+        }
+        catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error processing batches:', error);
+        }
+        finally {
+            client.release();
+        }
+    }
+    /**
+     * Clean up resources when stopping the service
+     */
+    shutdown() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+        }
+        console.log('Auction service shutdown');
+    }
+    /**
+     * Get all auctions - for REST API
+     */
+    async getAllAuctions() {
+        try {
+            const query = `
+        SELECT a.*, c.name as county_name 
+        FROM auctions a
+        LEFT JOIN counties c ON a.county_id = c.id
+        ORDER BY a.auction_date DESC
+      `;
+            const result = await this.pool.query(query);
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching auctions:', error);
+            throw error;
+        }
+    }
+    /**
+     * Get upcoming auctions - for REST API
+     */
+    async getUpcomingAuctions() {
+        try {
+            const query = `
+        SELECT a.*, c.name as county_name 
+        FROM auctions a
+        LEFT JOIN counties c ON a.county_id = c.id
+        WHERE a.auction_date >= CURRENT_DATE
+        AND a.status = 'UPCOMING'
+        ORDER BY a.auction_date ASC
+      `;
+            const result = await this.pool.query(query);
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching upcoming auctions:', error);
+            throw error;
+        }
+    }
+    /**
+     * Get auction by ID - for REST API
+     */
+    async getAuctionById(id) {
+        try {
+            const query = `
+        SELECT a.*, c.name as county_name 
+        FROM auctions a
+        LEFT JOIN counties c ON a.county_id = c.id
+        WHERE a.id = $1
+      `;
+            const result = await this.pool.query(query, [id]);
+            return result.rows[0] || null;
+        }
+        catch (error) {
+            console.error(`Error fetching auction with ID ${id}:`, error);
+            throw error;
+        }
+    }
+    /**
+     * Create a new auction - for REST API
+     */
+    async createAuction(auctionData) {
+        try {
+            const { name, auction_date, start_time, end_time, status, description, location, registration_url, metadata, county_id, } = auctionData;
+            const query = `
+        INSERT INTO auctions (
+          name, auction_date, start_time, end_time, 
+          status, description, location, registration_url, 
+          metadata, county_id, created_at, updated_at
+        ) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING *
+      `;
+            const values = [
+                name,
+                auction_date,
+                start_time,
+                end_time,
+                status || 'UPCOMING',
+                description,
+                location,
+                registration_url,
+                metadata || {},
+                county_id,
+            ];
+            const result = await this.pool.query(query, values);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error creating auction:', error);
+            throw error;
+        }
+    }
+    /**
+     * Update an auction - for REST API
+     */
+    async updateAuction(id, auctionData) {
+        try {
+            // First check if the auction exists
+            const existingAuction = await this.getAuctionById(id);
+            if (!existingAuction) {
+                return null;
+            }
+            // Build the update query dynamically based on provided fields
+            const updateFields = [];
+            const values = [];
+            let paramIndex = 1;
+            // Process each field that needs to be updated
+            Object.entries(auctionData).forEach(([key, value]) => {
+                // Skip if it's the id or doesn't exist in our schema
+                if (key === 'id')
+                    return;
+                // Add field to update list
+                updateFields.push(`${key} = $${paramIndex}`);
+                values.push(value);
+                paramIndex++;
+            });
+            // Add updated_at
+            updateFields.push('updated_at = NOW()');
+            // Add id as the last parameter
+            values.push(id);
+            const query = `
+        UPDATE auctions
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+            const result = await this.pool.query(query, values);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error(`Error updating auction with ID ${id}:`, error);
+            throw error;
+        }
+    }
+    /**
+     * Delete an auction - for REST API
+     */
+    async deleteAuction(id) {
+        try {
+            // First check if the auction exists
+            const existingAuction = await this.getAuctionById(id);
+            if (!existingAuction) {
+                return null;
+            }
+            const query = 'DELETE FROM auctions WHERE id = $1 RETURNING id';
+            const result = await this.pool.query(query, [id]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error(`Error deleting auction with ID ${id}:`, error);
+            throw error;
+        }
+    }
+    /**
+     * Start an auction - for REST API
+     */
+    async startAuction(id) {
+        try {
+            const auction = await this.getAuctionById(id);
+            if (!auction) {
+                return null;
+            }
+            if (auction.status !== 'UPCOMING') {
+                throw new Error('Only upcoming auctions can be started');
+            }
+            const query = `
+        UPDATE auctions
+        SET status = 'ACTIVE', start_time = NOW(), updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `;
+            const result = await this.pool.query(query, [id]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error(`Error starting auction with ID ${id}:`, error);
+            throw error;
+        }
+    }
+    /**
+     * End an auction - for REST API
+     */
+    async endAuction(id) {
+        try {
+            const auction = await this.getAuctionById(id);
+            if (!auction) {
+                return null;
+            }
+            if (auction.status !== 'ACTIVE') {
+                throw new Error('Only active auctions can be ended');
+            }
+            const query = `
+        UPDATE auctions
+        SET status = 'COMPLETED', end_time = NOW(), updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `;
+            const result = await this.pool.query(query, [id]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error(`Error ending auction with ID ${id}:`, error);
+            throw error;
+        }
+    }
+}
+exports.AuctionService = AuctionService;
+//# sourceMappingURL=AuctionService.js.map

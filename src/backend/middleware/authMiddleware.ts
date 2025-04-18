@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '@utils/jwtUtils';
+import { verifyAccessToken } from '../utils/jwtUtils';
 import { JwtPayload } from 'jsonwebtoken'; // Use JwtPayload from the library for type safety
 
 // Extend Express Request type to include user payload
@@ -22,7 +22,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   try {
     const decoded = verifyAccessToken(token);
     req.user = decoded; // Attach decoded payload (contains userId, etc.) to request
-    next(); // Proceed to the next middleware/route handler
+    return next(); // Add return here
   } catch (error) {
     // Handle specific JWT errors
     if (error instanceof Error) {
@@ -58,15 +58,15 @@ export const authorizeRole = (allowedRoles: string[]) => {
 export const authorizeRole = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     // Check if user object and role property exist
-    if (!req.user || typeof req.user === 'string' || !(req.user as JwtPayload).role) { // Type assertion for role access
+    if (!req.user || typeof req.user === 'string' || !req.user.role) { // Type assertion for role access
       return res.status(403).json({ message: 'Forbidden: Role information missing or invalid in token' });
     }
 
-    const userRole = (req.user as JwtPayload).role;
+    const userRole = req.user.role;
 
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ message: `Forbidden: Role '${userRole}' not authorized for this resource` });
     }
-    next(); // Role is allowed, proceed
+    return next(); // Add return here
   };
 }; 

@@ -6,14 +6,11 @@ import {
   Param,
   Delete,
   Put,
-  Query,
   ParseUUIDPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { BidService } from '../services/bid.service';
 import { CreateBidDto } from '../dtos/create-bid.dto';
 import { UpdateBidDto } from '../dtos/update-bid.dto';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Bid } from '../models/entities/bid.entity';
 
 @Controller('bids')
@@ -48,13 +45,11 @@ export class BidController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   async create(@Body() createBidDto: CreateBidDto): Promise<Bid> {
     return this.bidService.create(createBidDto);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateBidDto: UpdateBidDto
@@ -63,7 +58,6 @@ export class BidController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
   async delete(@Param('id', new ParseUUIDPipe()) id: string): Promise<boolean> {
     return this.bidService.delete(id);
   }

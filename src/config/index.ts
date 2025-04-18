@@ -3,9 +3,21 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+/**
+ * Application Configuration
+ * 
+ * CRITICAL PORT CONFIGURATION:
+ * - Server port 8081: Backend API/GraphQL server
+ * - Port 8080: Webpack dev server (frontend)
+ * - Port 4000: Reserved for legacy testing
+ * - Port 4001: Alternative frontend port (if 8080 is in use)
+ * 
+ * DO NOT change these ports without updating corresponding webpack configurations
+ * and ensuring no conflicts with other services during development.
+ */
 const config = {
   server: {
-    port: process.env.PORT || 3000,
+    port: process.env.PORT || 8081,
     nodeEnv: process.env.NODE_ENV || 'development',
   },
   db: {
@@ -26,4 +38,4 @@ const config = {
   },
 };
 
-export default config; 
+export default config;

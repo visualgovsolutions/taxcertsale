@@ -212,6 +212,95 @@ Level 4 tasks represent the highest complexity, enterprise-grade features of the
   - Develop data storytelling capabilities with automated narratives
   - Build shareable analysis with embedded interactivity
 
+## Admin Interface (Level 1-2 / some BE Level 3)
+
+This section outlines tasks for building the core administrative interface for managing the platform.
+
+### User Management
+- [ ] **FE:** Create Admin User List/Management Page (`/admin/users`)
+  - [ ] Display list/table of registered users (fetch from API later, use mock for now).
+  - [ ] Include columns for User ID, Name, Email, Role, Status (Incl. KYC Status).
+  - [ ] Implement basic filtering/searching functionality.
+  - [ ] Implement pagination for the user list.
+  - [ ] Handle loading state while fetching users.
+  - [ ] Handle API errors during user fetch.
+  - [ ] Link to user detail/edit page.
+- [ ] **FE:** Create Admin User Detail/Edit Page (`/admin/users/:userId`)
+  - [ ] Display detailed user information.
+  - [ ] Allow editing of user fields (e.g., Name, Role).
+  - [ ] Implement functionality to update user details (API call later).
+  - [ ] Handle loading state during user update.
+  - [ ] Handle API errors during user update.
+- [ ] **FE:** Implement User Role Assignment in UI
+  - [ ] Add dropdown/selector on User Edit page to change roles (User, Admin).
+  - [ ] Ensure changes trigger update logic with loading/error handling.
+- [ ] **FE:** Implement User Deactivation/Activation in UI
+  - [ ] Add button/toggle on User List or Detail page.
+  - [ ] Implement visual indication of user status.
+  - [ ] Ensure changes trigger update logic with loading/error handling.
+- [ ] **FE:** Create Admin UI for Bidder Registration Approval
+  - [ ] Display list of pending bidder registrations.
+  - [ ] Implement pagination for the pending list.
+  - [ ] Allow viewing submitted KYC documentation/status.
+  - [ ] Provide buttons to Approve/Reject registrations.
+  - [ ] Handle loading state during approval/rejection.
+  - [ ] Handle API errors during approval/rejection.
+- [ ] **FE:** Create Admin UI for Audit Log Viewing
+  - [ ] Display searchable/filterable list of audit log events (user actions, admin changes, security events).
+  - [ ] Implement pagination for audit logs.
+  - [ ] Handle loading state while fetching logs.
+  - [ ] Handle API errors during log fetch.
+- [ ] **DB:** Add `role`, `status`, `kyc_status` columns to `User` table.
+- [ ] **DB:** Create `AuditLog` table schema.
+- [ ] **DB:** Create `Registration` table schema (if needed for approval flow).
+- [ ] **BE:** Create API Endpoints for User Management (CRUD)
+  - [ ] `GET /api/v1/admin/users` (List users with pagination/filtering)
+  - [ ] `GET /api/v1/admin/users/:userId` (Get user details)
+  - [ ] `PUT /api/v1/admin/users/:userId` (Update user details/role/status)
+  - [ ] `DELETE /api/v1/admin/users/:userId` (Optional: Soft delete/deactivate user)
+  - [ ] `POST /api/v1/admin/registrations/:registrationId/approve` (Approve bidder)
+  - [ ] `POST /api/v1/admin/registrations/:registrationId/reject` (Reject bidder)
+  - [ ] `GET /api/v1/admin/audit-logs` (Fetch audit logs with filtering)
+- [ ] **BE:** Implement logic to write to `AuditLog` table for relevant actions.
+- [ ] **BE/Auth:** Implement role-based access control check in relevant API endpoints.
+
+### Site Configuration / Settings
+- [ ] **FE:** Create Admin Settings Page (`/admin/settings`)
+  - [ ] Design UI for managing basic site settings.
+    - [ ] Add fields for Site Name, Contact Info.
+    - [ ] Add UI for managing Feature Flags (if applicable).
+  - [ ] Handle loading state on fetch/save.
+  - [ ] Handle API errors on fetch/save.
+- [ ] **FE:** Create Auction Configuration Section within Settings
+  - [ ] UI for setting default auction schedule parameters.
+  - [ ] UI for configuring certificate batching rules.
+  - [ ] UI for setting interest rate limits/defaults.
+  - [ ] UI for managing global auction rules.
+  - [ ] Handle loading state on fetch/save for auction settings.
+  - [ ] Handle API errors on fetch/save for auction settings.
+- [ ] **DB:** Create `Settings` table schema (key/value or specific columns).
+- [ ] **DB:** Create `AuctionDefaults` table schema (if using dedicated table).
+- [ ] **BE:** Create API Endpoints for Settings Management
+  - [ ] `GET /api/v1/admin/settings`
+  - [ ] `PUT /api/v1/admin/settings`
+  - [ ] `GET /api/v1/admin/settings/auction`
+  - [ ] `PUT /api/v1/admin/settings/auction`
+
+### County Management (Placeholder - Link to Federation L4 Task?)
+- [ ] **FE:** Design UI for viewing/managing county participation or settings (if needed separately from L4 Federation).
+- [ ] **BE:** Define API for county-specific admin actions (if needed).
+
+### Admin Reporting/Analytics
+- [ ] **FE:** Enhance Admin Dashboard Page (`/admin/dashboard`)
+    - [ ] Add widgets for key metrics (e.g., pending registrations, active users, system health).
+    - [ ] Add quick links to common admin sections (User Mgmt, Settings, Reports).
+- [ ] **FE:** Create Financial Summary Report Page/Section
+- [ ] **FE:** Create Auction Performance Report Page/Section
+- [ ] **FE:** Create User Activity Report Page/Section
+- [ ] **BE:** Define APIs for specific admin reports (`/api/v1/admin/reports/...`)
+
+### Security / Access Control
+- [ ] **FE/Auth:** Implement role-based access control for /admin routes (e.g., enhance ProtectedRoute or check within layouts/pages).
 
 ## Implementation Considerations
 

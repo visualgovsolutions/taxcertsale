@@ -189,13 +189,18 @@ export class CertificateService {
     ];
     
     const result = await this.pool.query(query, values);
-    return result.rowCount;
+    // Handle potential null value for rowCount
+    return result.rowCount ?? 0;
   }
 
   /**
    * Map database row to Certificate object
    */
   private mapRowToCertificate(row: any): Certificate {
+    // Ensure faceValue is always a valid number, default to 0 if parsing fails
+    const faceValueParsed = parseFloat(row.face_value);
+    const finalFaceValue = isNaN(faceValueParsed) ? 0 : faceValueParsed;
+    
     return {
       id: row.id,
       certificateNumber: row.certificate_number,
@@ -203,7 +208,7 @@ export class CertificateService {
       parcelId: row.parcel_id,
       propertyAddress: row.property_address,
       ownerName: row.owner_name,
-      faceValue: parseFloat(row.face_value),
+      faceValue: finalFaceValue, // Use validated value
       auctionDate: row.auction_date ? new Date(row.auction_date) : undefined,
       status: row.status as CertificateStatus,
       interestRate: row.interest_rate !== null ? parseFloat(row.interest_rate) : undefined,

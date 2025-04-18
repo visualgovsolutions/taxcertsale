@@ -1,5 +1,5 @@
 import { bidRepository } from '../repositories/bid.repository';
-import { Bid, BidStatus } from '../models/entities/bid.entity';
+import { Bid } from '../models/entities/bid.entity';
 
 export class BidService {
   async findAll(): Promise<Bid[]> {

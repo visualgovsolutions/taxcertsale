@@ -11,7 +11,8 @@
 - last_name
 - phone
 - mfa_enabled
-- status
+- status (enum: pending_approval, active, inactive, rejected)
+- kyc_status (enum: not_submitted, pending, verified, failed)
 - created_at
 - updated_at
 
@@ -113,6 +114,7 @@
 - payment_status
 - created_at
 - updated_at
+
 ## Authentication and Security
 
 ### RefreshTokens
@@ -152,6 +154,21 @@
 - success
 - details_json
 - created_at
+
+## Registration Process
+
+### Registrations
+- id (PK)
+- user_id (FK to Users)
+- status (enum: pending_review, approved, rejected)
+- submitted_at (TIMESTAMP)
+- reviewed_by (FK to Users, nullable)
+- reviewed_at (TIMESTAMP, nullable)
+- rejection_reason (TEXT, nullable)
+- kyc_document_references (JSONB, nullable)
+- created_at
+- updated_at
+
 ## User Experience
 
 ### Watchlists
@@ -206,13 +223,14 @@
 - filter_params_json
 - created_at
 - updated_at
+
 ## Document Management
 
 ### Documents
 - id (PK)
-- entity_type (enum: certificate, property, user, etc.)
+- entity_type (enum: certificate, property, user, registration, etc.)
 - entity_id
-- document_type
+- document_type (e.g., 'kyc_id', 'proof_of_funds')
 - file_name
 - file_path
 - file_size
@@ -229,6 +247,7 @@
 - change_data_json
 - performed_by
 - created_at
+
 ## Portfolio Management
 
 ### Portfolios
@@ -258,6 +277,7 @@
 - certificate_id (FK)
 - tag_id (FK)
 - created_at
+
 ## Financial Management
 
 ### Deposits
@@ -289,11 +309,12 @@
 - reference_id
 - details_json
 - created_at
+
 ## Audit and Compliance
 
 ### AuditLogs
 - id (PK)
-- user_id (FK)
+- user_id (FK, nullable for system actions)
 - entity_type
 - entity_id
 - action
@@ -312,6 +333,25 @@
 - expires_at
 - created_at
 - updated_at
+
+## Site & Auction Configuration
+
+### GlobalSettings
+- key (VARCHAR, PK)
+- value (TEXT or JSONB)
+- description (TEXT, nullable)
+- is_sensitive (BOOLEAN, default: false)
+- updated_at
+
+### AuctionDefaults
+- id (PK)
+- default_batching_interval_minutes (INTEGER, nullable)
+- default_interest_rate_start (DECIMAL(5,2), default: 18.00)
+- default_interest_rate_min (DECIMAL(5,2), default: 0.25)
+- default_zero_bid_allowed (BOOLEAN, default: true)
+- default_bid_extension_minutes (INTEGER, nullable)
+- updated_at
+
 ## Reporting and Analytics
 
 ### ReportConfigurations
@@ -333,6 +373,7 @@
 - error_message
 - created_at
 - updated_at
+
 ## Advanced Features
 
 ### PropertyValueHistory
@@ -345,7 +386,7 @@
 
 ### MarketAnalytics
 - id (PK)
-- county_id (FK)
+- county_id (FK, nullable for global)
 - metric_type
 - time_period
 - value

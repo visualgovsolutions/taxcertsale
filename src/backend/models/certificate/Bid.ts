@@ -160,7 +160,8 @@ export class BidService {
       BidStatus.ACTIVE
     ]);
     
-    return result.rowCount;
+    // Handle potential null value for rowCount
+    return result.rowCount ?? 0;
   }
 
   /**

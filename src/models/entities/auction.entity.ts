@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Certificate } from './certificate.entity';
 import { County } from './county.entity';
+import { Bid } from './bid.entity';
 
 export enum AuctionStatus {
   UPCOMING = 'upcoming',
@@ -23,16 +24,16 @@ export class Auction {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ length: 255 })
   name!: string;
 
-  @Column({ type: 'date' })
+  @Column({ name: 'auction_date', type: 'date' })
   auctionDate!: Date;
 
-  @Column({ type: 'time' })
+  @Column({ name: 'start_time', type: 'time' })
   startTime!: string;
 
-  @Column({ type: 'time', nullable: true })
+  @Column({ name: 'end_time', type: 'time', nullable: true })
   endTime!: string;
 
   @Column({
@@ -48,25 +49,28 @@ export class Auction {
   @Column({ type: 'text', nullable: true })
   location!: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'registration_url', type: 'text', nullable: true })
   registrationUrl!: string;
 
-  @Column({ nullable: true, type: 'jsonb' })
-  metadata!: Record<string, any>;
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any>;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'county_id' })
   countyId!: string;
 
   @ManyToOne(() => County, county => county.auctions)
-  @JoinColumn({ name: 'countyId' })
+  @JoinColumn({ name: 'county_id' })
   county!: County;
 
   @OneToMany(() => Certificate, certificate => certificate.auction)
   certificates!: Certificate[];
 
-  @CreateDateColumn()
+  @OneToMany(() => Bid, bid => bid.auction)
+  bids!: Bid[];
+
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

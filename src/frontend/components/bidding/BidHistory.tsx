@@ -53,19 +53,28 @@ const BidHistory: React.FC<BidHistoryProps> = ({ certificateId, currentUserId })
   
   // Listen for new bids
   useEffect(() => {
-    const handleBidPlaced = (data: BidEventData) => {
-      if (data.certificateId === certificateId) {
-        const newBid: Bid = {
-          id: data.bidId,
-          certificateId: data.certificateId,
-          bidderId: data.bidderId,
-          interestRate: data.interestRate,
-          timestamp: typeof data.timestamp === 'string' ? new Date(data.timestamp) : data.timestamp,
-          status: 'active'
-        };
-        
-        setBids(prevBids => [newBid, ...prevBids]);
+    // Adjust handler to accept unknown args and perform type check inside
+    const handleBidPlaced = (...args: unknown[]) => {
+      // Assume the first argument is the data object
+      const data = args[0] as BidEventData; // Use type assertion (or proper type guard)
+      
+      // Basic validation of the received data structure
+      if (!data || typeof data !== 'object' || !data.certificateId || data.certificateId !== certificateId) {
+          console.warn('Received bid_placed event with invalid data or for wrong certificate:', data);
+          return;
       }
+
+      // Proceed with validated data
+      const newBid: Bid = {
+        id: data.bidId || 'unknown', // Add fallback for safety
+        certificateId: data.certificateId,
+        bidderId: data.bidderId || 'unknown', // Add fallback for safety
+        interestRate: typeof data.interestRate === 'number' ? data.interestRate : 0, // Add fallback
+        timestamp: data.timestamp ? (typeof data.timestamp === 'string' ? new Date(data.timestamp) : data.timestamp) : new Date(), // Ensure date
+        status: 'active' // Assuming new bids are active
+      };
+      
+      setBids(prevBids => [newBid, ...prevBids].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())); // Add sorting
     };
     
     socketService.on('bid_placed', handleBidPlaced);

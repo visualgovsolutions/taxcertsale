@@ -1,12 +1,13 @@
 import express, { Request, Response, Router } from 'express';
-import { ComplianceService } from '../services/compliance/compliance.service';
-import { getPostgresPool } from '@database/postgresPool'; // Use alias for DB pool
-import { authenticateToken, authorizeRole } from '@middleware/authMiddleware'; // Use alias and import both middlewares
+import { getComplianceService } from '../services/compliance/compliance.service';
+import { authenticateToken, authorizeRole } from '../middleware/authMiddleware'; // Use relative imports
 // import { UserRole } from '../models/UserRole'; // Remove UserRole import
 
 const router: Router = express.Router();
-const pool = getPostgresPool();
-const complianceService = new ComplianceService(pool);
+// Remove pool reference
+// const pool = getPostgresPool();
+// Use the singleton service getter instead of direct instantiation
+const complianceService = getComplianceService();
 
 // Middleware for all compliance routes: authentication and role check
 // Pass roles as strings
@@ -32,16 +33,16 @@ router.get('/1099-int/:year', async (req: Request, res: Response) => {
     if (reportBuffer instanceof Buffer) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=1099-INT-${year}.pdf`);
-      res.send(reportBuffer);
+      return res.send(reportBuffer);
     } else {
       // reportBuffer is expected to be an error string here based on service definition
-      res.status(500).send({ message: 'Failed to generate 1099-INT report', error: reportBuffer });
+      return res.status(500).send({ message: 'Failed to generate 1099-INT report', error: reportBuffer });
     }
   } catch (error) {
     console.error('Error in GET /compliance/1099-int/:year :', error);
     // Type assertion for error message
     const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
-    res.status(500).send({ message: 'Error generating 1099-INT report', error: errorMessage });
+    return res.status(500).send({ message: 'Error generating 1099-INT report', error: errorMessage });
   }
 });
 
@@ -67,16 +68,16 @@ router.get('/chapter197-report', async (req: Request, res: Response) => {
     if (reportBuffer instanceof Buffer) {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=chapter197-report-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.csv`);
-      res.send(reportBuffer);
+      return res.send(reportBuffer);
     } else {
       // reportBuffer is expected to be an error string here
-      res.status(500).send({ message: 'Failed to generate Chapter 197 report', error: reportBuffer });
+      return res.status(500).send({ message: 'Failed to generate Chapter 197 report', error: reportBuffer });
     }
   } catch (error) {
     console.error('Error in GET /compliance/chapter197-report:', error);
     // Type assertion for error message
     const errorMessage = (error instanceof Error) ? error.message : 'Unknown error occurred';
-    res.status(500).send({ message: 'Error generating Chapter 197 report', error: errorMessage });
+    return res.status(500).send({ message: 'Error generating Chapter 197 report', error: errorMessage });
   }
 });
 

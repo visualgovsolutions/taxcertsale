@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import AppError from '@utils/AppError';
-import config from '@config/index';
+import { Request, Response /*, NextFunction */ } from 'express';
+import AppError from '../utils/AppError';
+import config from '../../config/index';
 
 // Error handling function for development environment
 const sendErrorDev = (err: AppError | Error, res: Response) => {
@@ -50,7 +50,7 @@ const sendErrorProd = (err: AppError | Error, res: Response) => {
 };
 
 // Global error handling middleware
-const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response, next: NextFunction) => {
+const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response /*, next: NextFunction*/) => {
   // Set default status code and status if not already set (e.g., by AppError)
   if (err instanceof AppError) {
       err.statusCode = err.statusCode || 500;
@@ -70,14 +70,17 @@ const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response,
   }
 
   if (config.server.nodeEnv === 'development') {
-    sendErrorDev(err, res);
+    // Add return to make exit path explicit
+    return sendErrorDev(err, res); 
   } else if (config.server.nodeEnv === 'production') {
     // Note: Add specific error handling for known production errors if needed
     // e.g., handle JWT errors, validation errors specifically below if desired
-    sendErrorProd(err, res);
+    // Add return to make exit path explicit
+    return sendErrorProd(err, res);
   } else {
      // Default to development behavior if env is not set or recognized
-     sendErrorDev(err, res);
+     // Add return to make exit path explicit
+     return sendErrorDev(err, res);
   }
 };
 

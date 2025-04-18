@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Use createRoot for React 18+
+import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
 import App from './App';
 import { AuthProvider } from './context/AuthContext'; // Import the AuthProvider
-import './styles/index.css'; // Import our CSS
-// Import base styles later if needed (e.g., index.css)
-// import './index.css'; 
+// Import styles from their correct location
+import './styles/index.css'; // Import main styles
+import 'flowbite'; // Import Flowbite JS
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -14,8 +15,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 ); 

@@ -15,40 +15,48 @@ export class County {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ unique: true })
   name!: string;
 
-  @Column({ type: 'varchar', length: 10 })
-  code!: string;
+  @Column({ nullable: true })
+  state!: string;
+
+  @Column({ nullable: true })
+  countyCode?: string;
+
+  @Column({ nullable: true })
+  websiteUrl?: string;
+
+  @Column({ nullable: true })
+  taxCollectorUrl?: string;
+
+  @Column({ nullable: true })
+  propertyAppraiserUrl?: string;
 
   @Column({ type: 'text', nullable: true })
-  description!: string;
+  description?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  website!: string;
+  @Column({ type: 'jsonb', nullable: true })
+  metadata?: Record<string, any>;
 
-  @Column({ type: 'text', nullable: true })
-  contactInformation!: string;
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  latitude?: number;
 
-  @Column({ nullable: true, type: 'jsonb' })
-  metadata!: Record<string, any>;
-
-  @Column({ type: 'boolean', default: true })
-  isActive!: boolean;
-
-  @CreateDateColumn()
-  createdAt!: Date;
-
-  @UpdateDateColumn()
-  updatedAt!: Date;
-
-  // Relationships
-  @OneToMany(() => Auction, auction => auction.county)
-  auctions!: Auction[];
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  longitude?: number;
 
   @OneToMany(() => Property, property => property.county)
   properties!: Property[];
 
   @OneToMany(() => Certificate, certificate => certificate.county)
   certificates!: Certificate[];
+
+  @OneToMany(() => Auction, auction => auction.county)
+  auctions!: Auction[];
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

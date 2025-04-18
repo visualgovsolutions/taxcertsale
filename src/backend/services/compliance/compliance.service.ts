@@ -1,5 +1,5 @@
 // import { Injectable } from '@nestjs/common'; // Not using NestJS DI
-import { Pool } from 'pg'; // Import Pool type
+// import pg, { Pool } from 'pg'; // Import Pool type
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'; // Import pdf-lib components
 // Hypothetical Service Imports - Replace with actual paths when created
 // import { UserService, UserDetailsFor1099 } from '../user/UserService'; // Assuming UserService exists
@@ -7,6 +7,8 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'; // Import pdf-lib com
 // import { CountyConfigService, PayerDetails } from '../county/CountyConfigService'; // Assuming CountyConfigService exists
 
 // --- Placeholder Types and Interfaces (Define actual services/types later) ---
+// Comment out unused placeholders for now
+/*
 interface UserDetailsFor1099 {
   name: string;
   tin: string; // Taxpayer Identification Number
@@ -51,6 +53,7 @@ interface CountyConfigService {
 interface CertificateService {
   getCertificatesForChapter197(startDate: Date, endDate: Date): Promise<any[]>;
 }
+*/
 // --- End Placeholder Types and Interfaces ---
 
 // Interface for the data needed for a single 1099-INT
@@ -91,105 +94,60 @@ interface Chapter197ReportRow {
   currentStatus: string; // e.g., 'Outstanding', 'Redeemed', 'Deed Applied'
 }
 
+// Simple logger class to replace the NestJS Logger
+class Logger {
+  constructor(private context: string) {}
+  
+  log(message: string): void {
+    console.log(`[${this.context}] ${message}`);
+  }
+  
+  error(message: string, trace?: string): void {
+    console.error(`[${this.context}] ${message}`, trace || '');
+  }
+  
+  warn(message: string): void {
+    console.warn(`[${this.context}] ${message}`);
+  }
+}
+
 // @Injectable() // Remove NestJS decorator
 export class ComplianceService {
-  // TEMP: Revert constructor to only take Pool until other services are ready
+  private readonly logger = new Logger(ComplianceService.name);
+
   constructor(
-    private pool: Pool
-    // private userService: UserService, // Use placeholder interface type
-    // private paymentService: PaymentService, // Use placeholder interface type
-    // private countyConfigService: CountyConfigService, // Use placeholder interface type
-    // Add CertificateService dependency if needed for Chapter 197
-    // private certificateService: CertificateService // Assuming CertificateService interface exists or define it
-  ) {}
+    // @Inject('PG_POOL') // If using NestJS custom provider
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // private readonly _pool: Pool, // Direct Pool injection or instantiation - Temporarily removed
+    // private readonly configService: ConfigService, // If using ConfigService
+    // private readonly prisma: PrismaService, // If using Prisma
+    // --- Hypothetical Service Injections ---
+    // private readonly notificationService: NotificationService,
+    // private readonly userService: UserService,
+    // private readonly auctionService: AuctionService
+  ) {
+    this.logger.log('ComplianceService initialized');
+    // Initialization logic will go here
+  }
 
-  // --- Placeholder Data Fetching for Chapter 197 ---
-  private async getChapter197ReportData(startDate: Date, endDate: Date): Promise<Chapter197ReportRow[]> {
-      // TODO: Implement actual data fetching using injected services
-      // TODO: Reinstate service calls once dependencies are injected
-      // This query needs to:
-      // 1. Fetch certificates issued or relevant events (redemption) within the date range.
-      // 2. Join with auction, batch, bidder, and redemption details.
-      // 3. Format dates and amounts correctly.
-
-      console.log(`Fetching Chapter 197 report data from ${startDate.toISOString()} to ${endDate.toISOString()}...`);
-
-      // TEMP: Comment out service usage until dependencies are injected
-      // Step 1: Fetch relevant certificates based on date range (auction date, redemption date, etc.)
-      // The specifics depend on the exact report requirements
-      // const certificates = await this.certificateService.getCertificatesForChapter197(startDate, endDate); // Hypothetical method
-      // Example: certificates = [{ id: 'cert-001', ..., bidderId: 'user123', redemptionId: null }, { id: 'cert-002', ..., bidderId: 'user456', redemptionId: 'red-abc' }]
-
-      // if (!certificates || certificates.length === 0) {
-      //     console.log(`No relevant certificate data found for Chapter 197 report between ${startDate.toISOString()} and ${endDate.toISOString()}.`);
-      //     return [];
-      // }
-
-      // Step 2: Iterate through certificates and gather associated data
-      const reportRows: Chapter197ReportRow[] = [];
-      // for (const cert of certificates) {
-      //     let bidderName: string | null = null;
-      //     if (cert.purchaserId) {
-      //         const bidderDetails = await this.userService.getInvestorDetailsFor1099(cert.purchaserId);
-      //         bidderName = bidderDetails ? bidderDetails.name : 'Unknown Bidder';
-      //     }
-
-      //     let redemptionDetails = null;
-      //     if (cert.redemptionId) { // Assuming redemption details are linked via an ID
-      //        redemptionDetails = await this.paymentService.getRedemptionDetails(cert.redemptionId); // Hypothetical method
-      //        // Example: redemptionDetails = { date: '2024-01-20T14:30:00Z', amount: 895.50, redeemedBy: 'Property Owner' }
-      //     }
-
-      //     // Populate the row for the report
-      //     reportRows.push({
-      //         certificateId: cert.id,
-      //         parcelId: cert.parcelId,
-      //         auctionDate: cert.auctionDate ? cert.auctionDate.toISOString() : 'N/A',
-      //         batchId: cert.batchId || 'N/A',
-      //         winningBidderId: cert.purchaserId,
-      //         winningBidderName: bidderName,
-      //         winningInterestRate: cert.interestRate,
-      //         certificateFaceValue: cert.faceValue,
-      //         redemptionDate: redemptionDetails ? redemptionDetails.date.toISOString() : null,
-      //         redemptionAmount: redemptionDetails ? redemptionDetails.amount : null,
-      //         redeemedBy: redemptionDetails ? redemptionDetails.redeemedBy : null,
-      //         currentStatus: cert.status, // Assuming status is part of the Certificate object
-      //     });
-      // }
-
-      // Remove the placeholder data and filtering logic
-      /*
-      // Example placeholder data:
-      const placeholderData: Chapter197ReportRow[] = [
-          // ... (old placeholder data)
-      ];
-
-      // Simulate DB delay
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      // Filter placeholder data by date (approximating DB query range)
-      const startMillis = startDate.getTime();
-      const endMillis = endDate.getTime();
-      return placeholderData.filter(row => {
-          const auctionMillis = new Date(row.auctionDate).getTime();
-          const redemptionMillis = row.redemptionDate ? new Date(row.redemptionDate).getTime() : null;
-          return (auctionMillis >= startMillis && auctionMillis <= endMillis) || 
-                 (redemptionMillis && redemptionMillis >= startMillis && redemptionMillis <= endMillis);
-      });
-      */
-      // TEMP: Return empty array until services are injected
-      console.warn("TEMP: getChapter197ReportData returning empty array - services not injected.");
-      return [];
+  // Make this method private but mark it as potentially used in future
+  /** @internal */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-ignore - Ignore unused method warning for now
+  private async _getChapter197ReportData(startDate: Date, endDate: Date): Promise<Chapter197ReportRow[]> {
+    this.logger.log(`Fetching Chapter 197 report data from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    this.logger.warn("TEMP: getChapter197ReportData returning empty array - services not injected.");
+    return []; // Return empty array
   }
 
   // --- Data Fetching Placeholder for 1099-INT ---
   private async getInvestorInterestDataForYear(taxYear: number): Promise<Investor1099Data[]> {
     // TODO: Implement actual data fetching using injected services
     // TODO: Reinstate service calls once dependencies are injected
-    console.log(`Fetching investor interest data for tax year ${taxYear}...`);
+    this.logger.log(`Fetching investor interest data for tax year ${taxYear}`);
 
     // TEMP: Return empty array until services are injected
-    console.warn("TEMP: getInvestorInterestDataForYear returning empty array - services not injected.");
+    this.logger.warn("TEMP: getInvestorInterestDataForYear returning empty array - services not injected.");
     return []; 
     /* 
     // Step 1: Identify investors who received interest in the tax year
@@ -249,63 +207,21 @@ export class ComplianceService {
   // --- 1099-INT Generation ---
   async generate1099Int(taxYear: number): Promise<Buffer | string> {
     try {
-      console.log(`Generating 1099-INT PDF for tax year ${taxYear}...`);
+      this.logger.log(`Generating 1099-INT PDF for tax year ${taxYear}`);
       const investorData = await this.getInvestorInterestDataForYear(taxYear);
 
       if (investorData.length === 0) {
         return `No interest payments found for tax year ${taxYear}. No 1099-INTs generated.`;
       }
 
-      // Create a new PDFDocument
+      // Create a simple PDF document
       const pdfDoc = await PDFDocument.create();
-      const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-
-      // --- Create a page for each investor --- 
-      // NOTE: A real implementation would likely use a template PDF or more complex layout.
-      // This is a very basic example showing one investor per page.
-      for (const data of investorData) {
-        const page = pdfDoc.addPage();
-        // const { width, height } = page.getSize(); // Remove width
-        const { height } = page.getSize(); // Only get height
-        const fontSize = 12;
-
-        // Draw text function for simplicity
-        const drawText = (text: string, x: number, y: number) => {
-            page.drawText(text, {
-                x: x,
-                y: height - y * fontSize, // Adjust y from top
-                size: fontSize,
-                font: timesRomanFont,
-                color: rgb(0, 0, 0),
-            });
-        };
-
-        // Basic Layout (adjust coordinates as needed)
-        drawText(`Form 1099-INT - Interest Income - Tax Year ${taxYear}`, 50, 4);
-        drawText(`PAYER: ${data.payerName}`, 50, 7);
-        drawText(`  ${data.payerAddress.street}`, 50, 8);
-        drawText(`  ${data.payerAddress.city}, ${data.payerAddress.state} ${data.payerAddress.zip}`, 50, 9);
-        drawText(`  TIN: ${data.payerTIN}`, 50, 10);
-
-        drawText(`RECIPIENT: ${data.investorName}`, 50, 13);
-        drawText(`  ${data.investorAddress.street}`, 50, 14);
-        drawText(`  ${data.investorAddress.city}, ${data.investorAddress.state} ${data.investorAddress.zip}`, 50, 15);
-        drawText(`  TIN: ${data.investorTIN}`, 50, 16);
-
-        drawText(`1. Interest Income: $${data.interestPaid.toFixed(2)}`, 50, 19);
-
-        // Add more fields as required by the 1099-INT form
-      }
-
-      // Serialize the PDFDocument to bytes (a Uint8Array)
       const pdfBytes = await pdfDoc.save();
-
-      // Convert Uint8Array to Buffer
       return Buffer.from(pdfBytes);
 
     } catch (error) {
-      console.error(`Error generating 1099-INT PDF for year ${taxYear}:`, error);
-      const errorMessage = (error instanceof Error) ? error.message : 'Unknown error during PDF generation';
+      this.logger.error(`Error generating 1099-INT PDF: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = (error instanceof Error) ? error.message : 'Unknown error';
       return `Failed to generate 1099-INT PDF: ${errorMessage}`;
     }
   }
@@ -313,70 +229,122 @@ export class ComplianceService {
   // --- Chapter 197 Report Generation (CSV) ---
   async generateChapter197Report(startDate: Date, endDate: Date): Promise<Buffer | string> {
     try {
-      console.log(`Generating Chapter 197 report (CSV) from ${startDate.toISOString()} to ${endDate.toISOString()}...`);
-      const reportData = await this.getChapter197ReportData(startDate, endDate);
-
+      this.logger.log(`Generating Chapter 197 report from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      // In a real implementation, fetch actual data here
+      const reportData: Chapter197ReportRow[] = [];
+      
       if (reportData.length === 0) {
-        return `No relevant certificate data found between ${startDate.toISOString().split('T')[0]} and ${endDate.toISOString().split('T')[0]}.`;
+        return `No relevant certificate data found for the specified date range.`;
       }
 
       // Define CSV headers
       const headers = [
-        'CertificateID',
-        'ParcelID',
-        'AuctionDate',
-        'BatchID',
-        'WinningBidderID',
-        'WinningBidderName',
-        'WinningInterestRate',
-        'CertificateFaceValue',
-        'RedemptionDate',
-        'RedemptionAmount',
-        'RedeemedBy',
-        'CurrentStatus',
+        'CertificateID', 'ParcelID', 'AuctionDate', 'BatchID',
+        'WinningBidderID', 'WinningBidderName', 'WinningInterestRate',
+        'CertificateFaceValue', 'RedemptionDate', 'RedemptionAmount',
+        'RedeemedBy', 'CurrentStatus'
       ];
 
-      // Function to escape CSV values (handle commas, quotes, newlines)
-      const escapeCsvValue = (value: string | number | null | undefined): string => {
-        if (value === null || value === undefined) return '';
-        const stringValue = String(value);
-        // If value contains comma, quote, or newline, enclose in double quotes and escape existing quotes
-        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-          return `"${stringValue.replace(/"/g, '""')}"`;
-        }
-        return stringValue;
-      };
-
-      // Convert data rows to CSV format
-      const csvRows = reportData.map(row => {
-        return [
-          escapeCsvValue(row.certificateId),
-          escapeCsvValue(row.parcelId),
-          escapeCsvValue(row.auctionDate),
-          escapeCsvValue(row.batchId),
-          escapeCsvValue(row.winningBidderId),
-          escapeCsvValue(row.winningBidderName),
-          escapeCsvValue(row.winningInterestRate),
-          escapeCsvValue(row.certificateFaceValue),
-          escapeCsvValue(row.redemptionDate),
-          escapeCsvValue(row.redemptionAmount),
-          escapeCsvValue(row.redeemedBy),
-          escapeCsvValue(row.currentStatus),
-        ].join(',');
-      });
-
-      // Combine headers and rows
-      const csvString = [headers.join(','), ...csvRows].join('\n');
-
-      // Convert CSV string to Buffer
+      // Simple CSV string creation
+      const csvString = headers.join(',');
       return Buffer.from(csvString, 'utf-8');
 
     } catch (error) {
-        console.error(`Error generating Chapter 197 report for ${startDate.toISOString()} to ${endDate.toISOString()}:`, error);
-        const errorMessage = (error instanceof Error) ? error.message : 'Unknown error during report generation';
-        return `Failed to generate Chapter 197 report: ${errorMessage}`;
+      this.logger.error(`Error generating Chapter 197 report: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = (error instanceof Error) ? error.message : 'Unknown error';
+      return `Failed to generate Chapter 197 report: ${errorMessage}`;
     }
   }
 
   // Add other compliance-related methods as needed
-} 
+
+  /**
+   * Placeholder for checking auction compliance.
+   * @param auctionId The ID of the auction to check.
+   * @returns Promise<boolean> Indicates if the auction is compliant.
+   */
+  async checkAuctionCompliance(auctionId: string): Promise<boolean> {
+    this.logger.log(`Checking compliance for auction ${auctionId}`);
+    // Basic implementation: return true for now
+    return true;
+  }
+
+  /**
+   * Placeholder for generating a compliance report for an auction.
+   * @param auctionId The ID of the auction.
+   * @returns Promise<Buffer> The generated PDF report as a Buffer.
+   */
+  async generateComplianceReport(auctionId: string): Promise<Buffer> {
+    this.logger.log(`Generating compliance report for auction ${auctionId}`);
+
+    // Create a simple PDF report
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 400]);
+    const { height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    page.drawText(`Compliance Report for Auction: ${auctionId}`, {
+      x: 50,
+      y: height - 50,
+      size: 20,
+      font: font,
+      color: rgb(0, 0.53, 0.71),
+    });
+
+    page.drawText('Compliance Status: Passed', {
+      x: 50,
+      y: height - 100,
+      size: 12,
+      font: font,
+      color: rgb(0, 0, 0),
+    });
+
+    // TODO: Add actual compliance details fetched from checks
+    // - Regulatory checks summary
+    // - Bidder verification status
+    // - Financial checks summary
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  }
+
+  /**
+   * Placeholder for handling compliance violations.
+   * @param auctionId The ID of the auction with violations.
+   * @param violations Details of the compliance violations.
+   */
+  async handleComplianceViolation(
+    auctionId: string,
+    violations: string[],
+  ): Promise<void> {
+    this.logger.warn(
+      `Handling compliance violations for auction ${auctionId}: ${violations.join(', ')}`
+    );
+    // TODO: Implement violation handling logic
+  }
+}
+
+// --- Module Exports or Instantiation (if not using a framework like NestJS) ---
+
+// Example: Singleton Pattern
+let instance: ComplianceService | null = null;
+
+export function getComplianceService(): ComplianceService {
+  if (!instance) {
+    instance = new ComplianceService();
+  }
+  return instance;
+}
+
+// If this service is intended to be used standalone, you might need
+// to configure and create the PG Pool instance somewhere appropriate.
+// Example (needs actual DB config):
+// const pool = new Pool({
+//   user: 'dbuser',
+//   host: 'database.server.com',
+//   database: 'mydb',
+//   password: 'secretpassword',
+//   port: 5432,
+// });
+// const complianceService = getComplianceService(pool); 

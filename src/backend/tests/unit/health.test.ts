@@ -1,12 +1,12 @@
 import request from 'supertest';
 import { app } from '../../server';
-import { createTestServer } from '../setup';
+// import { createTestServer } from '../setup'; // Comment out unused import
 
 describe('Health Endpoint', () => {
-  let server: any;
+  // let server: any; // Comment out unused variable
 
   beforeAll(() => {
-    server = createTestServer();
+    // server = createTestServer(); // Comment out assignment
   });
 
   it('should return 200 status and correct response format', async () => {
