@@ -1,8 +1,31 @@
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { AppDataSource } from '../config/database';
-import { Auction } from '../models/entities';
+import { Auction } from '../models/entities/auction.entity';
 import { AuctionStatus } from '../models/entities/auction.entity';
 
+/**
+ * Auction State Machine
+ * 
+ * This repository implements a state machine for auction status transitions:
+ * 
+ * Valid Transitions:
+ * - UPCOMING -> ACTIVE (via activateAuction)
+ * - ACTIVE -> COMPLETED (via completeAuction)
+ * - UPCOMING -> CANCELLED (via cancelAuction)
+ * - ACTIVE -> CANCELLED (via cancelAuction)
+ * 
+ * Invalid Transitions (will return null):
+ * - COMPLETED -> Any other state
+ * - CANCELLED -> Any other state
+ * - ACTIVE -> UPCOMING
+ * - Any auction that doesn't exist
+ * 
+ * State Effects:
+ * - Only ACTIVE auctions can accept bids
+ * - UPCOMING auctions are in preparation phase
+ * - COMPLETED auctions are finalized and read-only
+ * - CANCELLED auctions are terminated prematurely and read-only
+ */
 class AuctionRepository {
   private repository: Repository<Auction>;
 
@@ -121,33 +144,39 @@ class AuctionRepository {
 
   async activateAuction(id: string): Promise<Auction | null> {
     const auction = await this.findById(id);
-    
     if (!auction) {
       return null;
     }
-    
+    if (auction.status !== AuctionStatus.UPCOMING) {
+      // Only allow activation from UPCOMING
+      return null;
+    }
     auction.status = AuctionStatus.ACTIVE;
     return this.repository.save(auction);
   }
 
   async completeAuction(id: string): Promise<Auction | null> {
     const auction = await this.findById(id);
-    
     if (!auction) {
       return null;
     }
-    
+    if (auction.status !== AuctionStatus.ACTIVE) {
+      // Only allow completion from ACTIVE
+      return null;
+    }
     auction.status = AuctionStatus.COMPLETED;
     return this.repository.save(auction);
   }
 
   async cancelAuction(id: string): Promise<Auction | null> {
     const auction = await this.findById(id);
-    
     if (!auction) {
       return null;
     }
-    
+    if (auction.status !== AuctionStatus.UPCOMING && auction.status !== AuctionStatus.ACTIVE) {
+      // Only allow cancellation from UPCOMING or ACTIVE
+      return null;
+    }
     auction.status = AuctionStatus.CANCELLED;
     return this.repository.save(auction);
   }

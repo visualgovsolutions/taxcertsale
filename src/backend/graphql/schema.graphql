@@ -1,3 +1,5 @@
+scalar JSON
+
 # Base Query type
 type Query {
   _empty: String # Placeholder field to ensure Query type is valid
@@ -10,3 +12,32 @@ type Query {
 # }
 
 # Define other types (e.g., User, Certificate) here later 
+
+enum AuctionStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+type Auction {
+  id: ID!
+  name: String!
+  auctionDate: String!
+  startTime: String!
+  endTime: String
+  status: AuctionStatus!
+  description: String
+  location: String
+  registrationUrl: String
+  metadata: JSON
+  countyId: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Mutation {
+  startAuction(id: ID!): Auction
+  completeAuction(id: ID!): Auction
+  cancelAuction(id: ID!): Auction
+} 

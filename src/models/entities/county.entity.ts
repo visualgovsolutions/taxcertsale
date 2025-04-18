@@ -1,3 +1,4 @@
+// IMPORTANT: Always import directly from the entity file, not from the barrel/index file, to avoid circular dependency issues with TypeORM.
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -6,7 +7,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { Auction } from './auction.entity';
+// import { Auction } from './auction.entity';
 import { Property } from './property.entity';
 import { Certificate } from './certificate.entity';
 
@@ -51,8 +52,8 @@ export class County {
   @OneToMany(() => Certificate, certificate => certificate.county)
   certificates!: Certificate[];
 
-  @OneToMany(() => Auction, auction => auction.county)
-  auctions!: Auction[];
+  @OneToMany('Auction', 'county')
+  auctions!: any[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -1,3 +1,4 @@
+// IMPORTANT: Always import directly from the entity file, not from the barrel/index file, to avoid circular dependency issues with TypeORM.
 import {
   Entity,
   PrimaryGeneratedColumn,

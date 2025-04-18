@@ -1,3 +1,4 @@
+// IMPORTANT: Always import directly from the entity file, not from the barrel/index file, to avoid circular dependency issues with TypeORM.
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,7 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Certificate } from './certificate.entity';
-import { County } from './county.entity';
+// import { County } from './county.entity';
 import { Bid } from './bid.entity';
 
 export enum AuctionStatus {
@@ -58,9 +59,9 @@ export class Auction {
   @Column({ name: 'county_id' })
   countyId!: string;
 
-  @ManyToOne(() => County, county => county.auctions)
+  @ManyToOne('County', 'auctions')
   @JoinColumn({ name: 'county_id' })
-  county!: County;
+  county!: any; // Use any to avoid type issues with string-based relations
 
   @OneToMany(() => Certificate, certificate => certificate.auction)
   certificates!: Certificate[];

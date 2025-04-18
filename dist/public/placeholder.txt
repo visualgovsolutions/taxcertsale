@@ -1,3 +1,0 @@
-# This file is intentionally left blank.
-# It exists to ensure the 'public' directory is not empty,
-# which can sometimes cause issues with build tools like CopyWebpackPlugin. 

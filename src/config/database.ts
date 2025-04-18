@@ -12,7 +12,7 @@ export const AppDataSource = new DataSource({
   password: db.password,
   database: db.database,
   entities,
-  synchronize: process.env.NODE_ENV === 'development', // Only in development
+  synchronize: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test', // Enable for dev and test
   logging: process.env.NODE_ENV === 'development',
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',

@@ -1,3 +1,4 @@
+// IMPORTANT: Always import directly from the entity file, not from the barrel/index file, to avoid circular dependency issues with TypeORM.
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -7,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from './user.entity';
+// import { User } from './user.entity';
 import { Certificate } from './certificate.entity';
 import { Auction } from './auction.entity';
 
@@ -25,9 +26,9 @@ export class Bid {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => User, user => user.bids)
+  @ManyToOne('User', 'bids')
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user!: any;
 
   @Column({ name: 'user_id' })
   userId!: string;

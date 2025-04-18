@@ -1,5 +1,5 @@
 import { auctionRepository } from '../repositories';
-import { Auction } from '../models/entities';
+import { Auction } from '../models/entities/auction.entity';
 import { AuctionStatus } from '../models/entities/auction.entity';
 
 export class AuctionService {

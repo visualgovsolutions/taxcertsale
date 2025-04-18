@@ -6,129 +6,153 @@
 ### Critical Path Dependencies
 
 1. **Foundation Layer** (Level 1)
-   - Project Setup → Backend Basics → Authentication → Database → GraphQL API → Frontend Basics
+   - [x] Project Setup
+   - [x] Backend Basics
+   - [x] Authentication
+   - [x] Database
+   - [x] GraphQL API
+   - [ ] Frontend Basics
    - These form the technical foundation and must be completed first
 
 2. **Core Business Logic** (Level 2)
-   - Database Connection Management → Certificate Management → Auction System Core
-   - Payment Processing depends on Authentication and Certificate Management
-   - County Administration depends on Database and Certificate Management
+   - [x] Database Connection Management
+   - [x] Certificate Management (entity, model, basic CRUD)
+   - [x] Auction System Core (WebSocket gateway, integration tests)
+   - [x] Auction State Management (GraphQL mutations, WebSocket enforcement)
+   - [ ] User Roles & Permissions (next priority)
+   - [ ] Certificate Batch Management (next priority)
+   - [ ] Bid Validation & History (next priority)
+   - [ ] Payment Processing
+   - [ ] County Administration
 
 3. **Advanced Features** (Level 3)
-   - Advanced Search builds on Property Management System from Level 2
-   - Map Visualization requires Property Management foundation
-   - API Development needs stable GraphQL foundation from Level 1
-   - Mobile Optimization needs solid Frontend Basics from Level 1
+   - [ ] Advanced Search builds on Property Management System from Level 2
+   - [ ] Map Visualization requires Property Management foundation
+   - [ ] API Development needs stable GraphQL foundation from Level 1
+   - [ ] Mobile Optimization needs solid Frontend Basics from Level 1
 4. **Enterprise Features** (Level 4)
-   - Advanced Investment Intelligence builds on Portfolio Management from Level 3
-   - Intelligent Property Analysis requires Map Visualization from Level 3
-   - Advanced Financial Integration depends on Payment Processing from Level 2
-   - Conversational Investor Experience builds on Mobile Experience from Level 3
+   - [ ] Advanced Investment Intelligence builds on Portfolio Management from Level 3
+   - [ ] Intelligent Property Analysis requires Map Visualization from Level 3
+   - [ ] Advanced Financial Integration depends on Payment Processing from Level 2
+   - [ ] Conversational Investor Experience builds on Mobile Experience from Level 3
 
 
 ### Parallel Development Opportunities
 
 These tasks can be developed in parallel with limited dependencies:
-- Frontend components (once Frontend Basics are complete)
-- DevOps setup (can start early in parallel with other tasks)
-- Documentation (can be developed alongside technical implementations)
-- Security implementations (can be integrated throughout development)
+- [ ] Frontend components (once Frontend Basics are complete)
+- [ ] DevOps setup (can start early in parallel with other tasks)
+- [ ] Documentation (can be developed alongside technical implementations)
+- [ ] Security implementations (can be integrated throughout development)
 
 ## Complexity Assessment
 
 ### High Complexity Components
 1. **Auction System Core** (Level 2)
-   - WebSocket-based bidding engine
-   - Real-time bid processing
-   - Certificate batch management system
+   - [x] WebSocket-based bidding engine
+   - [x] Real-time bid processing (basic, tested)
+   - [ ] Certificate batch management system
    - Complexity factors: Real-time processing, concurrency, data integrity during auctions
 
 2. **Certificate Management** (Level 2)
-   - Certificate lifecycle with complex state transitions
-   - Data consistency during concurrent bidding
-   - Recovery from connection failures
+   - [x] Certificate lifecycle with complex state transitions (basic CRUD, status fields)
+   - [ ] Data consistency during concurrent bidding
+   - [ ] Recovery from connection failures
 
 2. **Payment Processing**
-   - Financial data security
-   - Transaction consistency
-   - Gateway integration reliability
+   - [ ] Financial data security
+   - [ ] Transaction consistency
+   - [ ] Gateway integration reliability
 
 ## Recommended Implementation Sequence
 
-   - Complete Project Setup and Backend Basics first
-   - Implement Authentication and Database Connection systems
-   - Develop Frontend Basics and UI components
-   - Set up initial DevOps and Security infrastructure
+   - [x] Complete Project Setup and Backend Basics first
+   - [x] Implement Authentication and Database Connection systems
+   - [ ] Develop Frontend Basics and UI components
+   - [ ] Set up initial DevOps and Security infrastructure
 
 2. **Phase 2: Core Functionality (Level 2)**
-   - Implement Certificate Management system
-   - Develop Property Management system
-   - Build Auction System Core
-   - Integrate Payment Processing
-   - Create County Administration features
+   - [x] Implement Certificate Management system (entity, CRUD)
+   - [x] Develop Property Management system (entity, CRUD)
+   - [x] Build Auction System Core (WebSocket, integration tests)
+   - [ ] Integrate Payment Processing
+   - [ ] Create County Administration features
 
 3. **Phase 3: Advanced Features (Level 3)**
-   - Enhance search and filtering capabilities
-   - Implement map-based visualization
-   - Develop advanced analytics and reporting
-   - Create public and partner APIs
-   - Implement mobile optimization
+   - [ ] Enhance search and filtering capabilities
+   - [ ] Implement map-based visualization
+   - [ ] Develop advanced analytics and reporting
+   - [ ] Create public and partner APIs
+   - [ ] Implement mobile optimization
 
 4. **Phase 4: Enterprise Features (Level 4)**
-   - Implement Advanced Investment Intelligence Platform
-   - Develop Intelligent Property Analysis System
-   - Build Advanced Financial Integration Platform
-   - Create Conversational and Immersive Investor Experience
-   - Implement Enterprise-Grade Analytics Platform
+   - [ ] Implement Advanced Investment Intelligence Platform
+   - [ ] Develop Intelligent Property Analysis System
+   - [ ] Build Advanced Financial Integration Platform
+   - [ ] Create Conversational and Immersive Investor Experience
+   - [ ] Implement Enterprise-Grade Analytics Platform
 
 This implementation sequence follows the natural dependency flow while allowing for parallel development where possible, and addresses the highest risk areas earlier in the development process.
 ## Active High-Level Tasks
-- [ ] Initial project setup and structure verification
-  - Analyze project requirements in Florida_Tax_Certificate_Sale_PRD.md
-  - Set up source control with proper branching strategy (main, develop, feature)
-  - Configure development environment standardization
-  - Create foundational folder structure for microservices architecture
-  - Establish coding standards and documentation guidelines
-  - Implement linting and formatting configuration for team consistency
-- [ ] Define detailed system architecture
-  - Design microservices architecture for auction, user, and property systems
-  - Create database schema diagrams for all major entities
-  - Define API contracts between services
-  - Design WebSocket implementation for real-time bidding
+- [x] Initial project setup and structure verification
+  - [x] Analyze project requirements in Florida_Tax_Certificate_Sale_PRD.md
+  - [x] Set up source control with proper branching strategy (main, develop, feature)
+  - [x] Configure development environment standardization
+  - [x] Create foundational folder structure for microservices architecture
+  - [x] Establish coding standards and documentation guidelines
+  - [x] Implement linting and formatting configuration for team consistency
+- [x] Define detailed system architecture
+  - [x] Design microservices architecture for auction, user, and property systems
+  - [x] Create database schema diagrams for all major entities
+  - [x] Define API contracts between services
+  - [x] Design WebSocket implementation for real-time bidding
 - [ ] Create bidding UI wireframes
 
 ## Creative Phase Tasks
-- [ ] Design real-time bidding engine architecture
+- [x] Design real-time bidding engine architecture
 - [ ] Design certificate batch management system
-- [ ] Create multi-county data architecture
-- [ ] Design bid processing algorithm
+- [x] Create multi-county data architecture (basic, extendable)
+- [x] Design bid processing algorithm (basic, extendable)
 - [ ] Design bidding interface user experience
 - [ ] Create responsive dashboard designs
 
 
 ### Project Setup
 - [x] Initialize package.json with core dependencies
-  - Configure React, TypeScript, and Express
-  - Set up basic scripts for development and building
-  - Include only essential dependencies
+  - [x] Configure React, TypeScript, and Express
+  - [x] Set up basic scripts for development and building
+  - [x] Include only essential dependencies
 - [x] Configure basic TypeScript settings
-  - Set up reasonable type checking
-  - Configure standard module resolution
-  - Create simple path aliases if needed
+  - [x] Set up reasonable type checking
+  - [x] Configure standard module resolution
+  - [x] Create simple path aliases if needed
 - [x] Set up minimal code formatting
-  - Configure basic ESLint and Prettier rules
-  - Establish consistent formatting standards
-  - Add simple pre-commit hooks
+  - [x] Configure basic ESLint and Prettier rules
+  - [x] Establish consistent formatting standards
+  - [x] Add simple pre-commit hooks
 - [x] Create straightforward directory structure
-  - Separate frontend and backend clearly
-  - Establish basic component and service organization
-  - Use conventional naming patterns
+  - [x] Separate frontend and backend clearly
+  - [x] Establish basic component and service organization
+  - [x] Use conventional naming patterns
 - [x] Set up simple testing approach
-  - Configure Jest for basic testing
-  - Create examples for component and utility tests
-  - Set up simple test running script
+  - [x] Configure Jest for basic testing
+  - [x] Create examples for component and utility tests
+  - [x] Set up simple test running script
 
 > **Note**: This focused setup approach gets development started quickly with essential tooling, deferring complex CI/CD, extensive testing frameworks, and sophisticated build configurations.
+
+### Backend Milestones (recently completed)
+- [x] WebSocket Auction Gateway (with authentication)
+- [x] Robust integration tests for WebSocket gateway
+- [x] Property and Certificate entity models
+- [x] Enum/linter cleanup and build stability
+- [x] WIP commit and remote push for all code
+
+### Next Backend Priorities
+- [x] Auction State Management (enforce auction status transitions, GraphQL + WebSocket)
+- [ ] User Roles & Permissions (enforce in API and WebSocket)
+- [ ] Certificate Batch Management (batch creation, scheduling, closing)
+- [ ] Bid Validation & History (min/max, eligibility, history storage)
 
 ### Frontend Basics
 - [ ] Create minimal React app structure

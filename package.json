@@ -48,6 +48,7 @@
     "flowbite": "^3.1.2",
     "flowbite-react": "0.5.0",
     "graphql": "^16.10.0",
+    "graphql-type-json": "^0.3.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.8.6",
