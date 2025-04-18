@@ -8,42 +8,47 @@ import {
 } from 'typeorm';
 import { Auction } from './auction.entity';
 import { Property } from './property.entity';
+import { Certificate } from './certificate.entity';
 
 @Entity('counties')
 export class County {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  name: string;
+  @Column({ type: 'varchar', length: 255 })
+  name!: string;
 
-  @Column({ type: 'varchar', length: 2 })
-  state: string;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  countyCode: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  website: string;
+  @Column({ type: 'varchar', length: 10 })
+  code!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description!: string;
 
-  @Column({ type: 'simple-json', nullable: true })
-  contactInfo: Record<string, any>;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  website!: string;
 
-  @Column({ type: 'simple-json', nullable: true })
-  metadata: Record<string, any>;
+  @Column({ type: 'text', nullable: true })
+  contactInformation!: string;
 
-  @OneToMany(() => Property, property => property.county)
-  properties: Property[];
+  @Column({ nullable: true, type: 'jsonb' })
+  metadata!: Record<string, any>;
 
-  @OneToMany(() => Auction, auction => auction.county)
-  auctions: Auction[];
+  @Column({ type: 'boolean', default: true })
+  isActive!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
+
+  // Relationships
+  @OneToMany(() => Auction, auction => auction.county)
+  auctions!: Auction[];
+
+  @OneToMany(() => Property, property => property.county)
+  properties!: Property[];
+
+  @OneToMany(() => Certificate, certificate => certificate.county)
+  certificates!: Certificate[];
 }
