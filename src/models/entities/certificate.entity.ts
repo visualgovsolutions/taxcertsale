@@ -7,61 +7,78 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { County } from './county.entity';
 import { Property } from './property.entity';
 import { Auction } from './auction.entity';
+import { User } from './user.entity';
 
 @Entity('certificates')
 export class Certificate {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  certificateNumber: string;
-
-  @Column({ type: 'decimal', precision: 15, scale: 2 })
-  faceValue: number;
+  @Column({ length: 100, unique: true })
+  certificateNumber!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
+  faceValue!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   interestRate: number;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   issueDate: Date;
 
-  @Column({ type: 'varchar', length: 50 })
-  status: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  holderName: string;
+  @Column({ type: 'date', nullable: true })
+  expirationDate: Date;
 
   @Column({ type: 'date', nullable: true })
   redemptionDate: Date;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  redemptionAmount: number;
+  @Column({
+    type: 'enum',
+    enum: ['active', 'redeemed', 'expired', 'cancelled'],
+    default: 'active',
+  })
+  status!: 'active' | 'redeemed' | 'expired' | 'cancelled';
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'simple-json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
+  @ManyToOne(() => County, county => county.certificates)
+  @JoinColumn({ name: 'county_id' })
+  county: County;
+
+  @Column({ name: 'county_id' })
+  countyId: string;
+
   @ManyToOne(() => Property, property => property.certificates)
-  @JoinColumn({ name: 'propertyId' })
+  @JoinColumn({ name: 'property_id' })
   property: Property;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'property_id' })
   propertyId: string;
 
   @ManyToOne(() => Auction, auction => auction.certificates)
-  @JoinColumn({ name: 'auctionId' })
+  @JoinColumn({ name: 'auction_id' })
   auction: Auction;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'auction_id', nullable: true })
   auctionId: string;
 
-  @CreateDateColumn()
+  @ManyToOne(() => User, user => user.certificates, { nullable: true })
+  @JoinColumn({ name: 'owner_id' })
+  owner: User;
+
+  @Column({ name: 'owner_id', nullable: true })
+  ownerId: string;
+
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

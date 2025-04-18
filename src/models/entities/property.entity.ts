@@ -14,57 +14,54 @@ import { Certificate } from './certificate.entity';
 @Entity('properties')
 export class Property {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  parcelId: string;
+  @Column({ length: 100 })
+  parcelId!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  address: string;
+  @Column({ type: 'text' })
+  address!: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  city: string;
+  @Column({ type: 'text' })
+  city!: string;
 
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  zipCode: string;
+  @Column({ type: 'text', length: 2 })
+  state!: string;
 
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  latitude: string;
+  @Column({ type: 'text', length: 10 })
+  zipCode!: string;
 
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  longitude: string;
+  @Column({ nullable: true, type: 'text' })
+  description!: string;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 })
+  assessedValue!: number;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  propertyType: string;
+  @Column({ nullable: true, type: 'decimal', precision: 10, scale: 2 })
+  marketValue!: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  ownerName: string;
+  @Column({ nullable: true, type: 'text' })
+  ownerName!: string;
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  assessedValue: number;
+  @Column({ nullable: true, type: 'jsonb' })
+  coordinates!: { latitude: number; longitude: number };
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  marketValue: number;
+  @Column({ nullable: true, type: 'jsonb' })
+  metadata!: Record<string, any>;
 
-  @Column({ type: 'simple-json', nullable: true })
-  metadata: Record<string, any>;
+  @Column({ type: 'uuid' })
+  countyId!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 
   @ManyToOne(() => County, county => county.properties)
   @JoinColumn({ name: 'countyId' })
-  county: County;
-
-  @Column({ type: 'uuid' })
-  countyId: string;
+  county!: County;
 
   @OneToMany(() => Certificate, certificate => certificate.property)
-  certificates: Certificate[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
+  certificates!: Certificate[];
 }
