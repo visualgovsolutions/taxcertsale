@@ -50,6 +50,31 @@ class BidRepository {
   async findActiveByAuction(auctionId: string): Promise<Bid[]> {
     return this.repository.find({ where: { auctionId, status: BidStatus.ACTIVE } });
   }
+
+  async findLowestBidByCertificate(certificateId: string): Promise<Bid | null> {
+    return this.repository.findOne({
+      where: { certificateId },
+      order: { interestRate: 'ASC' },
+    });
+  }
+
+  async findByIdWithUser(id: string): Promise<Bid | null> {
+    return this.repository
+      .createQueryBuilder('bid')
+      .leftJoinAndSelect('bid.user', 'user')
+      .where('bid.id = :id', { id })
+      .getOne();
+  }
+
+  async findByIdWithRelations(id: string): Promise<Bid | null> {
+    return this.repository
+      .createQueryBuilder('bid')
+      .leftJoinAndSelect('bid.user', 'user')
+      .leftJoinAndSelect('bid.certificate', 'certificate')
+      .leftJoinAndSelect('bid.auction', 'auction')
+      .where('bid.id = :id', { id })
+      .getOne();
+  }
 }
 
 export const bidRepository = new BidRepository();
