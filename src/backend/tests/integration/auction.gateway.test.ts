@@ -1,237 +1,230 @@
-import { createServer } from 'http';
 import express from 'express';
-import { setupAuctionGateway } from '../../websockets/auction.gateway';
+import { Server } from 'http';
 import { io as Client, Socket as ClientSocket } from 'socket.io-client';
+import { startTestServer, stopTestServer } from '../test-server';
+import prisma from '@src/lib/prisma'; // Assuming prisma is used
+import { Server as SocketIOServer } from 'socket.io'; // Import type if needed
+import { setupAuctionGateway } from '../../websockets/auction.gateway'; // Import gateway setup
+
+// Increase timeout for async operations, especially socket connections/disconnections
+jest.setTimeout(30000);
+
+// Helper function to wait for a specific socket event
+const waitForEvent = <T>(socket: ClientSocket, eventName: string, timeout = 5000): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout waiting for event "${eventName}"`));
+    }, timeout);
+
+    socket.once(eventName, (data: T) => {
+      clearTimeout(timer);
+      resolve(data);
+    });
+
+    // Handle potential errors during waiting
+    socket.once('disconnect', (reason) => {
+        clearTimeout(timer);
+        reject(new Error(`Socket disconnected while waiting for ${eventName}: ${reason}`));
+    });
+    socket.once('connect_error', (err) => {
+        clearTimeout(timer);
+        reject(new Error(`Socket connection error while waiting for ${eventName}: ${err.message}`));
+    });
+     socket.once('errorEvent', (err) => { // Listen for general errors too
+         clearTimeout(timer);
+         reject(new Error(`Received errorEvent while waiting for ${eventName}: ${err.message || err}`));
+     });
+  });
+};
 
 describe('Auction WebSocket Gateway', () => {
-  let httpServer: ReturnType<typeof createServer>;
-  let serverAddress: string;
-  let clientSocket: ClientSocket;
+  let port: number;
+  let server: Server;
+  let io: SocketIOServer; // Variable to hold the Socket.IO server instance
+  let clients: ClientSocket[] = [];
+  let testCounty: any; // Using any temporarily to bypass type errors
 
-  beforeAll(done => {
-    const app = express();
-    httpServer = createServer(app);
-    setupAuctionGateway(httpServer);
-
-    httpServer.listen(() => {
-      const { port } = httpServer.address() as any;
-      serverAddress = `http://localhost:${port}`;
-      done();
+  beforeAll(async () => {
+    const serverSetup = await startTestServer();
+    server = serverSetup.server;
+    port = (server.address() as any).port;
+    io = setupAuctionGateway(server);
+    testCounty = await prisma.county.create({
+      data: { name: 'Test County WS', state: 'TS' }
     });
   });
 
-  afterAll(done => {
-    if (clientSocket && clientSocket.connected) {
-      clientSocket.disconnect();
+  beforeEach(async () => {
+    // Clean up existing auctions and bids before each test
+    await prisma.bid.deleteMany({});
+    await prisma.certificate.deleteMany({}); // Certificates might depend on auctions/properties
+    await prisma.auction.deleteMany({});
+    await prisma.property.deleteMany({}); // Properties might depend on county
+
+    // Create specific auctions needed for tests and set them to ACTIVE
+    const auctionData = [
+      { id: 'auction1', status: 'SCHEDULED', countyId: testCounty.id, auctionDate: new Date() },
+      { id: 'auction2', status: 'ACTIVE', countyId: testCounty.id, auctionDate: new Date() },
+      { id: 'auction3', status: 'SCHEDULED', countyId: testCounty.id, auctionDate: new Date() }, // For bid without joining test
+      { id: 'auction4', status: 'ACTIVE', countyId: testCounty.id, auctionDate: new Date() }, // Maybe needed? (Keep for now)
+      { id: 'auction5', status: 'ACTIVE', countyId: testCounty.id, auctionDate: new Date() },
+      { id: 'auction6', status: 'SCHEDULED', countyId: testCounty.id, auctionDate: new Date() }, // For multi-room test
+      { id: 'auctionNoJoin', status: 'ACTIVE', countyId: testCounty.id, auctionDate: new Date() },
+      { id: 'auctionInvalidBid', status: 'ACTIVE', countyId: testCounty.id, auctionDate: new Date() },
+      { id: 'auctionAuth', status: 'SCHEDULED', countyId: testCounty.id, auctionDate: new Date() },
+    ];
+
+    for (const data of auctionData) {
+      await prisma.auction.create({ data });
     }
-    httpServer.close(done);
   });
 
-  it('should join an auction room and receive confirmation', (done) => {
-    clientSocket = Client(serverAddress + '?token=testtoken');
-
-    clientSocket.on('connect', () => {
-      clientSocket.emit('joinAuction', 'auction1');
-    });
-
-    clientSocket.on('joinedAuction', (auctionId: string) => {
-      expect(auctionId).toBe('auction1');
-      clientSocket.disconnect();
-      done();
-    });
-    setTimeout(() => {
-      clientSocket.disconnect();
-      done(new Error('Did not receive joinedAuction event'));
-    }, 2000);
+  afterEach(() => {
+    // Disconnect clients
+    clients.forEach(client => client.connected && client.disconnect());
+    clients = [];
   });
 
-  it('should broadcast bidPlaced event to all clients in the room', (done) => {
-    const client1 = Client(serverAddress + '?token=testtoken');
-    const client2 = Client(serverAddress + '?token=testtoken');
-
-    let received = false;
-
-    client1.on('connect', () => {
-      client1.emit('joinAuction', 'auction2');
-    });
-    client2.on('connect', () => {
-      client2.emit('joinAuction', 'auction2');
-    });
-
-    client2.on('joinedAuction', () => {
-      setTimeout(() => {
-        client1.emit('placeBid', {
-          auctionId: 'auction2',
-          bidAmount: 500,
-          userId: 'user1',
-        });
-      }, 100);
-    });
-
-    client2.on('bidPlaced', (data) => {
-      expect(data).toMatchObject({
-        userId: 'user1',
-        bidAmount: 500,
-      });
-      received = true;
-      client1.disconnect();
-      client2.disconnect();
-      done();
-    });
-
-    setTimeout(() => {
-      if (!received) {
-        client1.disconnect();
-        client2.disconnect();
-        done(new Error('Did not receive bidPlaced event'));
-      }
-    }, 2000);
+  afterAll(async () => {
+    // Close Socket.IO server first (important!)
+    if (io) {
+       // Force disconnect all clients immediately
+       io.disconnectSockets(true);
+       io.close(); 
+    }
+    // Clean up test data
+    await prisma.bid.deleteMany({});
+    await prisma.certificate.deleteMany({});
+    await prisma.auction.deleteMany({});
+    await prisma.property.deleteMany({});
+    await prisma.county.delete({ where: { id: testCounty.id }});
+    // Disconnect Prisma 
+    await prisma.$disconnect();
+    // Stop the HTTP server
+    await stopTestServer();
   });
 
-  it('should emit error if placing a bid without joining', (done) => {
-    const client = Client(serverAddress + '?token=testtoken');
-    client.on('connect', () => {
-      client.emit('placeBid', { auctionId: 'auction3', bidAmount: 100, userId: 'user2' });
-    });
-    client.on('errorEvent', (err) => {
-      expect(err).toHaveProperty('message', 'You must join the auction room before bidding.');
-      client.disconnect();
-      done();
-    });
-    setTimeout(() => {
-      client.disconnect();
-      done(new Error('Did not receive errorEvent for bid without joining'));
-    }, 2000);
-  });
+  const createClient = (token?: string): ClientSocket => {
+    const socketUrl = `http://localhost:${port}`;
+    const options: any = {
+        reconnection: false,
+        forceNew: true,
+    };
+    if (token) {
+        options.auth = { token };
+    }
+    const client = Client(socketUrl, options);
+    clients.push(client);
+    return client;
+  };
 
-  it('should emit error for invalid bid payload', (done) => {
-    const client = Client(serverAddress + '?token=testtoken');
-    client.on('connect', () => {
-      client.emit('joinAuction', 'auction4');
-      client.emit('placeBid', { auctionId: 'auction4', bidAmount: -10, userId: 'user3' });
-    });
-    client.on('errorEvent', (err) => {
-      expect(err.message).toMatch(/(positive|payload)/i);
-      client.disconnect();
-      done();
-    });
-    setTimeout(() => {
-      client.disconnect();
-      done(new Error('Did not receive errorEvent for invalid bid payload'));
-    }, 2000);
-  });
+  it('should join an auction room and receive confirmation', async () => {
+    const client = createClient('testtoken');
+    await waitForEvent(client, 'connect');
+    client.emit('joinAuction', 'auction1');
+    const data = await waitForEvent(client, 'joinedAuction') as { auctionId: string };
+    expect(data.auctionId).toEqual('auction1');
+  }, 10000);
 
-  it('should only broadcast bidPlaced to clients in the correct room', (done) => {
-    const clientA = Client(serverAddress + '?token=testtoken');
-    const clientB = Client(serverAddress + '?token=testtoken');
-    const clientC = Client(serverAddress + '?token=testtoken');
-    let received = false;
-    clientA.on('connect', () => {
-      clientA.emit('joinAuction', 'auction5');
-    });
-    clientB.on('connect', () => {
-      clientB.emit('joinAuction', 'auction5');
-    });
-    clientC.on('connect', () => {
-      clientC.emit('joinAuction', 'auction6');
-    });
-    clientB.on('joinedAuction', () => {
-      setTimeout(() => {
-        clientA.emit('placeBid', { auctionId: 'auction5', bidAmount: 200, userId: 'userA' });
-      }, 100);
-    });
-    clientB.on('bidPlaced', (data) => {
-      expect(data.userId).toBe('userA');
-      received = true;
-      clientA.disconnect();
-      clientB.disconnect();
-      clientC.disconnect();
-      done();
-    });
-    clientC.on('bidPlaced', () => {
-      clientA.disconnect();
-      clientB.disconnect();
-      clientC.disconnect();
-      done(new Error('Client in wrong room received bidPlaced event'));
-    });
-    setTimeout(() => {
-      if (!received) {
-        clientA.disconnect();
-        clientB.disconnect();
-        clientC.disconnect();
-        done(new Error('Did not receive bidPlaced event in correct room'));
-      }
-    }, 2000);
-  });
+  it('should broadcast bidPlaced event to all clients in the room', async () => {
+    const client1 = createClient('client1-token');
+    const client2 = createClient('client2-token');
+    const auctionId = 'auction2';
 
-  it('should broadcast auctionStarted and auctionEnded events', (done) => {
-    const client1 = Client(serverAddress + '?token=testtoken');
-    const client2 = Client(serverAddress + '?token=testtoken');
-    let started = false;
-    let ended = false;
-    client1.on('connect', () => {
-      client1.emit('joinAuction', 'auction7');
-    });
-    client2.on('connect', () => {
-      client2.emit('joinAuction', 'auction7');
-    });
-    client2.on('joinedAuction', () => {
-      setTimeout(() => {
-        client1.emit('startAuction', 'auction7');
-      }, 100);
-    });
-    client2.on('auctionStarted', (data) => {
-      expect(data.auctionId).toBe('auction7');
-      started = true;
-      setTimeout(() => {
-        client1.emit('endAuction', 'auction7');
-      }, 100);
-    });
-    client2.on('auctionEnded', (data) => {
-      expect(data.auctionId).toBe('auction7');
-      ended = true;
-      client1.disconnect();
-      client2.disconnect();
-      done();
-    });
-    setTimeout(() => {
-      if (!started || !ended) {
-        client1.disconnect();
-        client2.disconnect();
-        done(new Error('Did not receive auctionStarted or auctionEnded event'));
-      }
-    }, 3000);
-  });
+    await Promise.all([
+        waitForEvent(client1, 'connect'), 
+        waitForEvent(client2, 'connect')
+    ]);
 
-  it('should reject connection without token', (done) => {
-    const client = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}`, {
-      reconnection: false,
-      timeout: 1000,
-      autoConnect: false,
-    });
-    client.on('authError', (err: any) => {
-      expect(err).toHaveProperty('message', 'Authentication required');
-      client.disconnect();
-      done();
-    });
-    client.on('connect_error', (err: any) => {
-      // Should not connect
-      expect(err.message).toMatch(/Authentication token required/);
-      client.disconnect();
-      done();
-    });
-    client.open();
-  });
+    client1.emit('joinAuction', auctionId);
+    client2.emit('joinAuction', auctionId);
 
-  it('should allow connection with token and join auction', (done) => {
-    const client = require('socket.io-client')(`http://localhost:${(httpServer.address() as any).port}?token=validtoken`);
-    client.on('connect', () => {
-      client.emit('joinAuction', 'auctionAuth');
-    });
-    client.on('joinedAuction', (auctionId: string) => {
-      expect(auctionId).toBe('auctionAuth');
-      client.disconnect();
-      done();
-    });
-  });
+    await Promise.all([
+        waitForEvent(client1, 'joinedAuction'),
+        waitForEvent(client2, 'joinedAuction')
+    ]);
+
+    client1.emit('placeBid', { auctionId: auctionId, bidAmount: 100, userId: 'user1' });
+
+    const bidData1 = await waitForEvent(client1, 'bidPlaced') as { userId: string, bidAmount: number };
+    const bidData2 = await waitForEvent(client2, 'bidPlaced') as { userId: string, bidAmount: number };
+
+    expect(bidData1.userId).toBe('user1');
+    expect(bidData1.bidAmount).toBe(100);
+    expect(bidData2.userId).toBe('user1');
+    expect(bidData2.bidAmount).toBe(100);
+
+  }, 10000);
+
+  it('should emit error if placing a bid without joining', async () => {
+    const client = createClient('testtoken');
+    await waitForEvent(client, 'connect');
+    client.emit('placeBid', { auctionId: 'auctionNoJoin', bidAmount: 100, userId: 'user1' });
+    const errorData = await waitForEvent(client, 'errorEvent') as { message: string };
+    expect(errorData.message).toContain('join the auction room before bidding');
+  }, 10000);
+
+  it('should emit error for invalid bid payload', async () => {
+    const client = createClient('testtoken');
+    await waitForEvent(client, 'connect');
+    
+    client.emit('joinAuction', 'auctionInvalidBid');
+    await waitForEvent(client, 'joinedAuction');
+
+    client.emit('placeBid', { auctionId: 'auctionInvalidBid' /* missing bidAmount */ });
+    const errorData = await waitForEvent(client, 'errorEvent') as { message: string };
+    expect(errorData.message).toContain('Invalid bid payload');
+  }, 10000);
+
+  it('should only broadcast bidPlaced to clients in the correct room', async () => {
+    const clientA = createClient('clientA-token');
+    const clientB = createClient('clientB-token');
+    const clientC = createClient('clientC-token');
+    const auctionId5 = 'auction5';
+    const auctionId6 = 'auction6';
+
+    await Promise.all([
+        waitForEvent(clientA, 'connect'), 
+        waitForEvent(clientB, 'connect'),
+        waitForEvent(clientC, 'connect')
+    ]);
+
+    clientA.emit('joinAuction', auctionId5);
+    clientB.emit('joinAuction', auctionId5);
+    clientC.emit('joinAuction', auctionId6);
+
+    await Promise.all([
+        waitForEvent(clientA, 'joinedAuction'),
+        waitForEvent(clientB, 'joinedAuction'),
+        waitForEvent(clientC, 'joinedAuction')
+    ]);
+
+    clientA.emit('placeBid', { auctionId: auctionId5, bidAmount: 200, userId: 'userA' });
+
+    const bidDataB = await waitForEvent(clientB, 'bidPlaced') as { userId: string, bidAmount: number };
+    expect(bidDataB.userId).toBe('userA');
+    expect(bidDataB.bidAmount).toBe(200);
+
+    await expect(waitForEvent(clientA, 'bidPlaced', 1000)).rejects.toThrow('Timeout waiting for event "bidPlaced"');
+    await expect(waitForEvent(clientC, 'bidPlaced', 1000)).rejects.toThrow('Timeout waiting for event "bidPlaced"');
+
+  }, 10000);
+
+  it('should reject connection without token', async () => {
+    const client = createClient(); // No token
+    try {
+      await waitForEvent(client, 'connect');
+      fail('Connection succeeded without token');
+    } catch (error: any) {
+      expect(error.message).toContain('Authentication token required');
+    }
+  }, 10000);
+
+  it('should allow connection with token and join auction', async () => {
+    const client = createClient('valid-token');
+    await waitForEvent(client, 'connect');
+    client.emit('joinAuction', 'auctionAuth');
+    const joinData = await waitForEvent(client, 'joinedAuction') as { auctionId: string };
+    expect(joinData.auctionId).toEqual('auctionAuth');
+  }, 10000);
 });

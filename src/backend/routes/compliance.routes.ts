@@ -1,6 +1,8 @@
 import express, { Request, Response, Router } from 'express';
 import { getComplianceService } from '../services/compliance/compliance.service';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware'; // Use relative imports
+// Removed incorrect import: import { UserRole } from '../../models/entities/user.entity';
+// import complianceController from '../controllers/compliance.controller';
 // import { UserRole } from '../models/UserRole'; // Remove UserRole import
 
 const router: Router = express.Router();
@@ -11,7 +13,7 @@ const complianceService = getComplianceService();
 
 // Middleware for all compliance routes: authentication and role check
 // Pass roles as strings
-router.use(authenticateToken, authorizeRole(['ADMIN', 'COUNTY_ADMIN']));
+router.use(authenticateToken, authorizeRole(['admin', 'county_official'])); // Use string literals for roles
 
 // --- Routes ---
 
@@ -80,5 +82,19 @@ router.get('/chapter197-report', async (req: Request, res: Response) => {
     return res.status(500).send({ message: 'Error generating Chapter 197 report', error: errorMessage });
   }
 });
+
+// Compliance routes
+router.get('/report/:auctionId', async (req, res, next) => {
+  try {
+    const report = await complianceService.generateComplianceReport(req.params.auctionId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(report);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Comment out or remove any route handlers that reference the missing controller
+// router.get('/compliance-report', authenticateToken, authorizeRole([UserRole.ADMIN]), complianceController.getComplianceReport);
 
 export default router; 

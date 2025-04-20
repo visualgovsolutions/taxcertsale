@@ -1,199 +1,239 @@
 import { GraphQLJSON } from 'graphql-type-json';
-import { auctionService } from '../../services/auction.service';
 import { auctionRepository } from '../../repositories/auction.repository';
-import { AuctionStatus } from '../../models/entities/auction.entity';
 import { Server } from 'socket.io';
+import { GraphQLContext } from './index';
+import { GraphQLError } from 'graphql';
+import { emitAuctionStateChange } from '../websockets/auction.gateway';
 
-// Global socket.io instance reference
+// Define constants for roles/statuses used in logic
+const UserRoles = { ADMIN: 'admin', COUNTY_OFFICIAL: 'county_official' }; // Adjust if needed
+const AuctionStatuses = { SCHEDULED: 'scheduled', ACTIVE: 'active', COMPLETED: 'closed', CANCELLED: 'cancelled' }; // Map to Prisma strings
+
+// Socket.io server instance - will be initialized elsewhere
 let io: Server | null = null;
 
-// Function to set the socket.io instance (called from server setup)
-export const setSocketInstance = (socketIo: Server) => {
-  io = socketIo;
+// Give the socket.io server to the resolvers
+export const setSocketServer = (socketServer: Server) => {
+  io = socketServer;
 };
 
-// Create repository instances
-// const auctionRepositoryInstance = new AuctionRepository();
+// Helper function to check if user is authenticated and has required roles
+const checkAuth = (context: GraphQLContext, roles: string[]) => { // Use string[] for roles
+  if (!context.user) {
+    throw new GraphQLError('User not authenticated', {
+      extensions: { code: 'UNAUTHENTICATED' }
+    });
+  }
+  
+  if (!roles.includes(context.user.role)) { // Check against user's string role
+    throw new GraphQLError(`User does not have required role. Required: ${roles.join(', ')}`, {
+      extensions: { code: 'FORBIDDEN' }
+    });
+  }
+};
+
+// Use the auctionRepository instance
+const auctionRepositoryInstance = auctionRepository;
+
+// Define resolver parameter types
+type ResolverParent = unknown;
+type IdArg = { id: string };
+type StatusArg = { status: string }; // Status is now a string
+type CountyIdArg = { countyId: string };
 
 // Define a basic resolver map
 const resolvers = {
   JSON: GraphQLJSON,
   Query: {
-    hello: () => 'Hello from GraphQL!',
+    hello: (_parent: ResolverParent, _args: Record<string, never>, _context: GraphQLContext) => 'Hello world!',
     // Add other query resolvers here
-    auctions: async () => {
+    auctions: async (_: ResolverParent, _args: Record<string, never>, _context: GraphQLContext) => {
+      return await auctionRepositoryInstance.findAll();
+    },
+    auction: async (_: ResolverParent, { id }: IdArg, _context: GraphQLContext) => {
+      return await auctionRepositoryInstance.findById(id);
+    },
+    auctionsByCounty: async (_: ResolverParent, { countyId }: CountyIdArg, _context: GraphQLContext) => {
+      return await auctionRepositoryInstance.findByCounty(countyId);
+    },
+    upcomingAuctions: async (_: ResolverParent, _args: Record<string, never>, _context: GraphQLContext) => {
+      return await auctionRepositoryInstance.findUpcoming();
+    },
+    activeAuctions: async (_: ResolverParent, _args: Record<string, never>, _context: GraphQLContext) => {
+      return await auctionRepositoryInstance.findActive();
+    },
+    auctionsByStatus: async (_: ResolverParent, args: StatusArg, _context: GraphQLContext) => {
       try {
-        return await auctionRepository.findAll();
+        // Public endpoint - no auth required
+        return await auctionRepositoryInstance.findByStatus(args.status);
       } catch (error) {
-        throw new Error(`Failed to fetch auctions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new GraphQLError(`Failed to fetch auctions by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     },
-    auction: async (_: any, args: { id: string }) => {
+    auctionManagementData: async (_: ResolverParent, _args: Record<string, never>, context: GraphQLContext) => {
       try {
-        const auction = await auctionRepository.findById(args.id);
-        if (!auction) {
-          throw new Error(`Auction with ID ${args.id} not found`);
+        // Only admins and county officials can access management data
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        // Return management statistics
+        // Assuming repository methods return arrays or use prisma count
+        const activeCount = (await auctionRepositoryInstance.findActive()).length;
+        const upcomingCount = (await auctionRepositoryInstance.findUpcoming()).length;
+        const completedCount = (await auctionRepositoryInstance.findCompleted()).length;
+        
+        return {
+          activeAuctions: activeCount,
+          upcomingAuctions: upcomingCount,
+          completedAuctions: completedCount,
+          totalAuctions: activeCount + upcomingCount + completedCount
+        };
+      } catch (error) {
+        if (error instanceof GraphQLError) {
+          throw error;
         }
-        return auction;
-      } catch (error) {
-        throw new Error(`Failed to fetch auction: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    },
-    auctionsByCounty: async (_: unknown, { countyId }: { countyId: string }) => {
-      return await auctionRepository.findByCounty(countyId);
-    },
-    upcomingAuctions: async () => {
-      return await auctionRepository.findUpcoming();
-    },
-    activeAuctions: async () => {
-      return await auctionRepository.findActive();
-    },
-    auctionsByStatus: async (_: any, args: { status: AuctionStatus }) => {
-      try {
-        return await auctionRepository.findByStatus(args.status);
-      } catch (error) {
-        throw new Error(`Failed to fetch auctions by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new GraphQLError(`Failed to fetch management data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   },
   Mutation: {
-    startAuction: async (_: any, args: { id: string }) => {
+    // Auction state transition mutations
+    startAuction: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
       try {
-        const auction = await auctionRepository.findById(args.id);
+        // Only admins and county officials can start auctions
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        const auction = await auctionRepositoryInstance.findById(id);
+        
+        // Debug log: print auction object and status
+        console.log('[GraphQL] startAuction: loaded auction:', auction);
         
         if (!auction) {
-          return {
-            success: false,
-            message: `Auction with ID ${args.id} not found`,
-            auction: null
-          };
-        }
-        
-        if (auction.status !== AuctionStatus.UPCOMING) {
-          return {
-            success: false,
-            message: `Cannot start auction with status ${auction.status}. Only UPCOMING auctions can be started.`,
-            auction
-          };
-        }
-        
-        const activatedAuction = await auctionRepository.activateAuction(args.id);
-        
-        // Emit WebSocket event if io is available
-        if (io) {
-          io.to(`auction:${args.id}`).emit('auctionStarted', {
-            auctionId: args.id,
-            status: AuctionStatus.ACTIVE
+          throw new GraphQLError(`Auction with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' }
           });
         }
         
-        return {
-          success: true,
-          message: 'Auction started successfully',
-          auction: activatedAuction
-        };
+        // Use string status
+        if (auction.status !== AuctionStatuses.SCHEDULED) {
+          console.log('[GraphQL] startAuction: status mismatch:', auction.status, '!=', AuctionStatuses.SCHEDULED);
+          throw new GraphQLError(`Cannot start auction with status ${auction.status}. Only SCHEDULED auctions can be started.`, {
+            extensions: { code: 'BAD_REQUEST' }
+          });
+        }
+        
+        const updatedAuction = await auctionRepositoryInstance.activateAuction(id);
+        
+        if (!updatedAuction) {
+          // This might happen if the atomic update in repo failed (e.g., status changed concurrently)
+           throw new GraphQLError(`Failed to start auction ${id}. It might not be in the correct state or was not found.`, {
+            extensions: { code: 'INTERNAL_SERVER_ERROR' }
+          });
+        }
+        
+        // Use the shared emitter function for WebSocket notifications
+        emitAuctionStateChange('auctionStarted', {
+          auctionId: id,
+          status: AuctionStatuses.ACTIVE, // Use string status
+          startedBy: context.user?.email || 'system'
+        });
+        
+        return updatedAuction;
       } catch (error) {
-        return {
-          success: false,
-          message: `Failed to start auction: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          auction: null
-        };
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        throw new GraphQLError(`Failed to start auction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     },
-    completeAuction: async (_: any, args: { id: string }) => {
+    
+    completeAuction: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
       try {
-        const auction = await auctionRepository.findById(args.id);
+        // Only admins and county officials can complete auctions
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        const auction = await auctionRepositoryInstance.findById(id);
         
         if (!auction) {
-          return {
-            success: false,
-            message: `Auction with ID ${args.id} not found`,
-            auction: null
-          };
-        }
-        
-        if (auction.status !== AuctionStatus.ACTIVE) {
-          return {
-            success: false,
-            message: `Cannot complete auction with status ${auction.status}. Only ACTIVE auctions can be completed.`,
-            auction
-          };
-        }
-        
-        const completedAuction = await auctionRepository.completeAuction(args.id);
-        
-        // Emit WebSocket event if io is available
-        if (io) {
-          io.to(`auction:${args.id}`).emit('auctionCompleted', {
-            auctionId: args.id,
-            status: AuctionStatus.COMPLETED
+          throw new GraphQLError(`Auction with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' }
           });
         }
         
-        return {
-          success: true,
-          message: 'Auction completed successfully',
-          auction: completedAuction
-        };
+        // Use string status
+        if (auction.status !== AuctionStatuses.ACTIVE) {
+          throw new GraphQLError(`Cannot complete auction with status ${auction.status}. Only ACTIVE auctions can be completed.`, {
+            extensions: { code: 'BAD_REQUEST' }
+          });
+        }
+        
+        const updatedAuction = await auctionRepositoryInstance.completeAuction(id);
+
+        if (!updatedAuction) {
+          throw new GraphQLError(`Failed to complete auction ${id}. It might not be in the correct state or was not found.`, {
+            extensions: { code: 'INTERNAL_SERVER_ERROR' }
+          });
+        }
+        
+        // Use the shared emitter function for WebSocket notifications
+        emitAuctionStateChange('auctionCompleted', {
+          auctionId: id,
+          status: AuctionStatuses.COMPLETED, // Use string status
+          completedBy: context.user?.email || 'system'
+        });
+        
+        return updatedAuction;
       } catch (error) {
-        return {
-          success: false,
-          message: `Failed to complete auction: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          auction: null
-        };
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        throw new GraphQLError(`Failed to complete auction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     },
-    cancelAuction: async (_: any, args: { id: string }) => {
+    
+    cancelAuction: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
       try {
-        const auction = await auctionRepository.findById(args.id);
+        // Only admins and county officials can cancel auctions
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        const auction = await auctionRepositoryInstance.findById(id);
         
         if (!auction) {
-          return {
-            success: false,
-            message: `Auction with ID ${args.id} not found`,
-            auction: null
-          };
-        }
-        
-        // Only allow cancellation of UPCOMING or ACTIVE auctions
-        if (auction.status !== AuctionStatus.UPCOMING && auction.status !== AuctionStatus.ACTIVE) {
-          return {
-            success: false,
-            message: `Cannot cancel auction with status ${auction.status}. Only UPCOMING or ACTIVE auctions can be cancelled.`,
-            auction
-          };
-        }
-        
-        const canceledAuction = await auctionRepository.cancelAuction(args.id);
-        
-        // Emit WebSocket event if io is available
-        if (io) {
-          io.to(`auction:${args.id}`).emit('auctionCancelled', {
-            auctionId: args.id,
-            status: AuctionStatus.CANCELLED
+          throw new GraphQLError(`Auction with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' }
           });
         }
         
-        return {
-          success: true,
-          message: 'Auction cancelled successfully',
-          auction: canceledAuction
-        };
+        // Can only cancel upcoming or active auctions (use string status)
+        if (auction.status !== AuctionStatuses.SCHEDULED && auction.status !== AuctionStatuses.ACTIVE) {
+          throw new GraphQLError(`Cannot cancel auction with status ${auction.status}. Only SCHEDULED or ACTIVE auctions can be cancelled.`, {
+            extensions: { code: 'BAD_REQUEST' }
+          });
+        }
+        
+        const updatedAuction = await auctionRepositoryInstance.cancelAuction(id);
+
+        if (!updatedAuction) {
+           throw new GraphQLError(`Failed to cancel auction ${id}. It might not be in the correct state or was not found.`, {
+            extensions: { code: 'INTERNAL_SERVER_ERROR' }
+          });
+        }
+        
+        // Use the shared emitter function for WebSocket notifications
+        emitAuctionStateChange('auctionCancelled', {
+          auctionId: id,
+          status: AuctionStatuses.CANCELLED, // Use string status
+          cancelledBy: context.user?.email || 'system'
+        });
+        
+        return updatedAuction;
       } catch (error) {
-        return {
-          success: false,
-          message: `Failed to cancel auction: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          auction: null
-        };
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        throw new GraphQLError(`Failed to cancel auction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
-  },
-  // Add resolvers for custom types if needed
-  Auction: {
-    // For example, to resolve related fields like county or certificates
-    // county: (parent) => countyRepository.findById(parent.countyId),
-    // certificates: (parent) => certificateRepository.findByAuctionId(parent.id),
   }
 };
 
-export default resolvers; 
+export default resolvers;

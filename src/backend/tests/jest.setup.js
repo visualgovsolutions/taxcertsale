@@ -1,43 +1,53 @@
-// Set testing timeout to 30s for all tests (database operations might take longer)
+import 'reflect-metadata';
+// Removed TypeORM / old test util imports
+// import { config } from '../../config/test';
+// import { TestDataSource, initializeTestDatabase, closeTestDatabase } from '../../config/database.test';
+import { sign } from 'jsonwebtoken';
+// import { cleanAllTables } from '../../../tests/test-utils/transaction';
+
+// Set a longer timeout for tests (keep if needed, adjust value)
 jest.setTimeout(30000);
 
-// Mock environment variables
+// Mock environment variables (keep)
+process.env.JWT_SECRET = 'test-secret';
 process.env.NODE_ENV = 'test';
-process.env.DB_HOST = 'localhost';
-process.env.DB_PORT = '5432';
-process.env.DB_USERNAME = 'test';
-process.env.DB_PASSWORD = 'test';
-process.env.DB_DATABASE = 'test';
+// Remove old DB vars if not used elsewhere
+// process.env.TEST_DB_USER = 'test';
+// process.env.TEST_DB_PASSWORD = 'test';
+// process.env.TEST_DB_NAME = 'test';
+process.env.PORT = '4000';
 
-// Global test database connection
-let connection;
-
-// Silence console logs during tests unless DEBUG is enabled
-if (process.env.NODE_ENV === 'test') {
+// Silence console logs during tests unless DEBUG is enabled (keep)
+if (process.env.NODE_ENV === 'test' && !process.env.DEBUG) {
+  const originalConsole = { ...console };
   global.console = {
-    ...console,
-    error: (...args) => {
-      if (process.env.DEBUG) console.error(...args);
-    },
-    log: (...args) => {
-      if (process.env.DEBUG) console.log(...args);
-    },
+    error: jest.fn(),
+    log: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
+    debug: jest.fn(),
+    // Restore original error for test failures
+    _error: originalConsole.error
   };
 }
 
-// Add custom matchers
+// Add custom matchers (keep)
 expect.extend({
   toBeWithinRange(received, floor, ceiling) {
     const pass = received >= floor && received <= ceiling;
-    return {
-      message: () =>
-        pass
-          ? `expected ${received} not to be within range ${floor} - ${ceiling}`
-          : `expected ${received} to be within range ${floor} - ${ceiling}`,
-      pass,
-    };
+    if (pass) {
+      return {
+        message: () =>
+          `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () =>
+          `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
   },
   toBeValidUUID(received) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -60,54 +70,78 @@ expect.extend({
       pass,
     };
   },
+  toBeValidBidPercentage(received) {
+    const pass = received >= 5 && received <= 18;
+    return {
+      message: () =>
+        pass
+          ? `expected ${received} not to be a valid bid percentage (5-18)`
+          : `expected ${received} to be a valid bid percentage (5-18)`,
+      pass,
+    };
+  },
 });
 
-// Global test helpers
+// Global test helpers (keep)
 global.sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Database connection and transaction handling
-beforeAll(async () => {
-  try {
-    const { TestDataSource } = require('../config/database.test');
-    connection = await TestDataSource.initialize();
-    await connection.synchronize(true); // Force schema recreation
-    
-    // Store connection for use in tests
-    global.__JEST_TYPEORM_CONNECTION__ = connection;
-  } catch (error) {
-    console.error('Test database initialization failed:', error);
-    throw error;
-  }
-});
+global.generateTestToken = (userId, role = 'investor') => {
+  return sign(
+    { userId, role },
+    process.env.JWT_SECRET || 'test-secret', // Add fallback for safety
+    { expiresIn: '1h' }
+  );
+};
 
-// Clean up database after all tests
-afterAll(async () => {
-  try {
-    if (connection?.isInitialized) {
-      await connection.dropDatabase(); // Drop all tables
-      await connection.destroy(); // Close connection
+global.mockDate = (isoDate) => {
+  const RealDate = Date;
+  global.Date = class extends RealDate {
+    constructor(...args) {
+      if (args.length) {
+        return new RealDate(...args);
+      }
+      return new RealDate(isoDate);
     }
-  } catch (error) {
-    console.error('Test database cleanup failed:', error);
-    throw error;
-  }
-});
+    static now() {
+      return new RealDate(isoDate).getTime();
+    }
+  };
+  // Add a way to restore the original Date if needed
+  return () => {
+    global.Date = RealDate;
+  };
+};
 
-// Transaction handling for each test
+// Remove database-related hooks
+/*
+beforeAll(async () => {
+  // ... removed database init ...
+});
+*/
+
+/*
 beforeEach(async () => {
-  if (connection?.isInitialized) {
-    await connection.synchronize(true); // Recreate schema before each test
+  // ... removed table cleaning ...
+  jest.clearAllMocks(); // Keep mock clearing if useful
+  if (global.Date !== Date) { // Keep date restoration if using mockDate
+    global.Date = Date;
+  }
+});
+*/
+
+// Clean up mocks and timers after each test (useful)
+afterEach(() => {
+  jest.clearAllMocks();
+  jest.useRealTimers(); // Ensure timers are reset if mocked
+  // Restore Date if it was mocked by mockDate helper
+  if (global.Date.name !== 'Date') { // Basic check if Date might be mocked
+    global.Date = Date; 
   }
 });
 
-// Rollback transaction after each test
-afterEach(async () => {
-  if (connection?.isInitialized) {
-    await connection.query('TRUNCATE TABLE bid CASCADE');
-    await connection.query('TRUNCATE TABLE certificate CASCADE');
-    await connection.query('TRUNCATE TABLE auction CASCADE');
-    await connection.query('TRUNCATE TABLE property CASCADE');
-    await connection.query('TRUNCATE TABLE county CASCADE');
-    await connection.query('TRUNCATE TABLE "user" CASCADE');
-  }
-}); 
+
+/*
+afterAll(async () => {
+  // ... removed database closing ...
+});
+*/

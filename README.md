@@ -36,8 +36,8 @@ npm run build
 ## Development Environment
 - React + TypeScript
 - Tailwind CSS for styling
-- Prisma ORM for database operations
-- GraphQL API with Apollo Client
+- TypeORM for database operations
+- GraphQL API with Apollo Server/Client
 - Vite for development and building
 
 ## TypeScript Configuration

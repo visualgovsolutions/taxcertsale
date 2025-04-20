@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { app } from '../../server';
 import { setupTestEnvironment, clearDatabase } from '../setup';
+import { TestDataSource, clearAllTables, initializeTestDatabase } from '../../../config/database.test';
 
 describe('E2E API Tests', () => {
   let teardown: () => Promise<void>;
@@ -9,16 +10,18 @@ describe('E2E API Tests', () => {
   beforeAll(async () => {
     // Setup test environment and get teardown function
     teardown = await setupTestEnvironment();
+    await initializeTestDatabase();
   });
 
   afterAll(async () => {
     // Teardown test environment
     await teardown();
+    await TestDataSource.destroy();
   });
 
   beforeEach(async () => {
     // Clear database before each test
-    await clearDatabase();
+    await clearAllTables(TestDataSource);
     
     // Setup test data if needed
     // For example, create a test user and authenticate

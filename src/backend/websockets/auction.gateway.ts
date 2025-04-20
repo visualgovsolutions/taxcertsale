@@ -1,10 +1,12 @@
 import { Server, Socket } from 'socket.io';
 import http from 'http';
 import { auctionRepository } from '../../repositories/auction.repository';
-import { AuctionStatus } from '../../models/entities/auction.entity';
 
 // Helper to track which sockets have joined which auctions
 const joinedAuctions: Record<string, Set<string>> = {};
+
+// Global Socket.io server instance that will be shared with GraphQL resolvers
+let ioServer: Server | null = null;
 
 // This function sets up the Socket.io server for auction events
 export function setupAuctionGateway(server: http.Server) {
@@ -14,10 +16,13 @@ export function setupAuctionGateway(server: http.Server) {
       methods: ['GET', 'POST'],
     },
   });
+  
+  // Store the io server globally
+  ioServer = io;
 
   io.use((socket, next) => {
-    // Simulate authentication: require a 'token' in handshake query
-    const token = socket.handshake.query.token;
+    // Read token from auth object, not query parameters
+    const token = socket.handshake.auth.token;
     if (!token) {
       return next(new Error('Authentication token required'));
     }
@@ -26,7 +31,8 @@ export function setupAuctionGateway(server: http.Server) {
   });
 
   io.on('connection', (socket: Socket) => {
-    if (!socket.handshake.query.token) {
+    // Double check using auth.token
+    if (!socket.handshake.auth.token) {
       socket.emit('authError', { message: 'Authentication required' });
       socket.disconnect();
       return;
@@ -35,7 +41,7 @@ export function setupAuctionGateway(server: http.Server) {
 
     // Join auction room
     socket.on('joinAuction', async (auctionId: string) => {
-      socket.join(`auction_${auctionId}`);
+      socket.join(`auction:${auctionId}`); // Updated room name format to match GraphQL resolvers
       if (!joinedAuctions[auctionId]) joinedAuctions[auctionId] = new Set();
       joinedAuctions[auctionId].add(socket.id);
       
@@ -55,7 +61,7 @@ export function setupAuctionGateway(server: http.Server) {
 
     // Leave auction room
     socket.on('leaveAuction', (auctionId: string) => {
-      socket.leave(`auction_${auctionId}`);
+      socket.leave(`auction:${auctionId}`); // Updated room name format
       joinedAuctions[auctionId]?.delete(socket.id);
       socket.emit('leftAuction', auctionId);
       console.log(`Client ${socket.id} left auction ${auctionId}`);
@@ -92,7 +98,7 @@ export function setupAuctionGateway(server: http.Server) {
         }
         
         // Only allow bids for ACTIVE auctions
-        if (auction.status !== AuctionStatus.ACTIVE) {
+        if (auction.status !== 'active') {
           socket.emit('errorEvent', { 
             message: `Cannot place bid. Auction is ${auction.status.toLowerCase()}, not active.` 
           });
@@ -100,11 +106,13 @@ export function setupAuctionGateway(server: http.Server) {
         }
         
         // Process valid bid
-        io.to(`auction_${auctionId}`).emit('bidPlaced', {
-          userId,
-          bidAmount,
-          timestamp: new Date().toISOString(),
-        });
+        if (ioServer) {
+          ioServer.to(`auction:${auctionId}`).emit('bidPlaced', {
+            userId,
+            bidAmount,
+            timestamp: new Date().toISOString(),
+          });
+        }
         console.log(`Bid placed in auction ${auctionId} by user ${userId}: $${bidAmount}`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -128,9 +136,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        if (auction.status !== AuctionStatus.UPCOMING) {
+        if (auction.status !== 'scheduled') {
           socket.emit('errorEvent', { 
-            message: `Cannot start auction with status ${auction.status}. Only UPCOMING auctions can be started.` 
+            message: `Cannot start auction with status ${auction.status}. Only scheduled auctions can be started.`
           });
           return;
         }
@@ -142,9 +150,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        io.to(`auction_${data.auctionId}`).emit('auctionStarted', {
+        io.to(`auction:${data.auctionId}`).emit('auctionStarted', {
           auctionId: data.auctionId,
-          status: AuctionStatus.ACTIVE,
+          status: 'active',
           startedAt: new Date().toISOString(),
         });
         
@@ -170,9 +178,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        if (auction.status !== AuctionStatus.ACTIVE) {
+        if (auction.status !== 'active') {
           socket.emit('errorEvent', { 
-            message: `Cannot end auction with status ${auction.status}. Only ACTIVE auctions can be completed.` 
+            message: `Cannot end auction with status ${auction.status}. Only active auctions can be completed.`
           });
           return;
         }
@@ -184,9 +192,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        io.to(`auction_${data.auctionId}`).emit('auctionEnded', {
+        io.to(`auction:${data.auctionId}`).emit('auctionEnded', {
           auctionId: data.auctionId,
-          status: AuctionStatus.COMPLETED,
+          status: 'closed',
           endedAt: new Date().toISOString(),
         });
         
@@ -212,9 +220,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        if (auction.status !== AuctionStatus.UPCOMING && auction.status !== AuctionStatus.ACTIVE) {
+        if (auction.status !== 'scheduled' && auction.status !== 'active') {
           socket.emit('errorEvent', { 
-            message: `Cannot cancel auction with status ${auction.status}. Only UPCOMING or ACTIVE auctions can be cancelled.` 
+            message: `Cannot cancel auction with status ${auction.status}. Only scheduled or active auctions can be cancelled.`
           });
           return;
         }
@@ -226,9 +234,9 @@ export function setupAuctionGateway(server: http.Server) {
           return;
         }
         
-        io.to(`auction_${data.auctionId}`).emit('auctionCancelled', {
+        io.to(`auction:${data.auctionId}`).emit('auctionCancelled', {
           auctionId: data.auctionId,
-          status: AuctionStatus.CANCELLED,
+          status: 'cancelled',
           cancelledAt: new Date().toISOString(),
         });
         
@@ -251,4 +259,27 @@ export function setupAuctionGateway(server: http.Server) {
   });
 
   return io;
+}
+
+// Shared emitter function for auction state changes
+// This is exported and can be used by GraphQL resolvers
+export function emitAuctionStateChange(
+  eventType: 'auctionStarted' | 'auctionCompleted' | 'auctionCancelled', 
+  data: {
+    auctionId: string;
+    status: string;
+    [key: string]: any;
+  }
+) {
+  if (ioServer) {
+    ioServer.to(`auction:${data.auctionId}`).emit(eventType, data);
+    console.log(`Emitted ${eventType} for auction ${data.auctionId} with status ${data.status}`);
+  } else {
+    console.warn('Socket server not initialized, cannot emit state change');
+  }
+}
+
+// Returns the ioServer instance to be used elsewhere in the application
+export function getSocketServer(): Server | null {
+  return ioServer;
 }

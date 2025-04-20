@@ -1,7 +1,6 @@
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { AppDataSource } from '../config/database';
-import { Auction } from '../models/entities/auction.entity';
-import { AuctionStatus } from '../models/entities/auction.entity';
+import prisma from '../lib/prisma'; // Import the central Prisma client
+import { Prisma } from '../generated/prisma'; // Import Auction type as type, but Prisma namespace as value
+import type { Auction } from '../generated/prisma'; // Import Auction type as type, but Prisma namespace as value
 
 /**
  * Auction State Machine
@@ -27,158 +26,178 @@ import { AuctionStatus } from '../models/entities/auction.entity';
  * - CANCELLED auctions are terminated prematurely and read-only
  */
 class AuctionRepository {
-  private repository: Repository<Auction>;
-
-  constructor() {
-    this.repository = AppDataSource.getRepository(Auction);
-  }
-
   async findAll(): Promise<Auction[]> {
-    return this.repository.find();
+    return prisma.auction.findMany();
   }
 
   async findById(id: string): Promise<Auction | null> {
-    return this.repository.findOneBy({ id });
+    return prisma.auction.findUnique({ where: { id } });
   }
 
   async findByCounty(countyId: string): Promise<Auction[]> {
-    return this.repository.findBy({ countyId });
+    return prisma.auction.findMany({ where: { countyId } });
   }
 
-  async findByStatus(status: AuctionStatus): Promise<Auction[]> {
-    return this.repository.findBy({ status });
+  async findByStatus(status: string): Promise<Auction[]> {
+    return prisma.auction.findMany({ where: { status } });
   }
 
   async findUpcoming(): Promise<Auction[]> {
-    return this.repository.find({
-      where: { status: AuctionStatus.UPCOMING },
-      order: { auctionDate: 'ASC' }
+    return prisma.auction.findMany({
+      where: { status: 'scheduled' },
+      orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findActive(): Promise<Auction[]> {
-    return this.repository.find({
-      where: { status: AuctionStatus.ACTIVE },
-      order: { auctionDate: 'ASC' }
+    return prisma.auction.findMany({
+      where: { status: 'active' },
+      orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findCompleted(): Promise<Auction[]> {
-    return this.repository.find({
-      where: { status: AuctionStatus.COMPLETED },
-      order: { auctionDate: 'DESC' }
+    return prisma.auction.findMany({
+      where: { status: 'closed' },
+      orderBy: { auctionDate: 'desc' }
     });
   }
 
   async findByDateRange(startDate: Date, endDate: Date): Promise<Auction[]> {
-    return this.repository.find({
-      where: { auctionDate: Between(startDate, endDate) },
-      order: { auctionDate: 'ASC' }
+    return prisma.auction.findMany({
+      where: { auctionDate: { gte: startDate, lte: endDate } },
+      orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findUpcomingByDateRange(startDate: Date, endDate: Date): Promise<Auction[]> {
-    return this.repository.find({
+    return prisma.auction.findMany({
       where: {
-        auctionDate: Between(startDate, endDate),
-        status: AuctionStatus.UPCOMING
+        auctionDate: { gte: startDate, lte: endDate },
+        status: 'scheduled'
       },
-      order: { auctionDate: 'ASC' }
+      orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findBeforeDate(date: Date): Promise<Auction[]> {
-    return this.repository.find({
-      where: { auctionDate: LessThanOrEqual(date) },
-      order: { auctionDate: 'DESC' }
+    return prisma.auction.findMany({
+      where: { auctionDate: { lte: date } },
+      orderBy: { auctionDate: 'desc' }
     });
   }
 
   async findAfterDate(date: Date): Promise<Auction[]> {
-    return this.repository.find({
-      where: { auctionDate: MoreThanOrEqual(date) },
-      order: { auctionDate: 'ASC' }
+    return prisma.auction.findMany({
+      where: { auctionDate: { gte: date } },
+      orderBy: { auctionDate: 'asc' }
     });
   }
 
-  async create(auctionData: Partial<Auction>): Promise<Auction> {
-    const auction = this.repository.create(auctionData);
-    return this.repository.save(auction);
+  async create(auctionData: Prisma.AuctionCreateInput): Promise<Auction> {
+    return prisma.auction.create({ data: auctionData });
   }
 
-  async update(id: string, auctionData: Partial<Auction>): Promise<Auction | null> {
-    const updateResult = await this.repository.update(id, auctionData);
-    
-    if (updateResult.affected === 0) {
-      return null;
+  async update(id: string, auctionData: Prisma.AuctionUpdateInput): Promise<Auction | null> {
+    try {
+      return await prisma.auction.update({
+        where: { id },
+        data: auctionData,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      console.error("Error updating auction:", error);
+      throw error;
     }
-    
-    return this.findById(id);
   }
 
   async delete(id: string): Promise<boolean> {
-    const deleteResult = await this.repository.delete(id);
-    return deleteResult.affected ? deleteResult.affected > 0 : false;
+    try {
+      await prisma.auction.delete({ where: { id } });
+      return true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return false;
+      }
+      console.error("Error deleting auction:", error);
+      throw error;
+    }
   }
 
   async findWithCertificates(id: string): Promise<Auction | null> {
-    return this.repository.findOne({
+    return prisma.auction.findUnique({
       where: { id },
-      relations: ['certificates']
+      include: { certificates: true }
     });
   }
 
   async findWithCounty(id: string): Promise<Auction | null> {
-    return this.repository.findOne({
+    return prisma.auction.findUnique({
       where: { id },
-      relations: ['county']
+      include: { county: true }
     });
   }
 
   async findWithRelations(id: string): Promise<Auction | null> {
-    return this.repository.findOne({
+    return prisma.auction.findUnique({
       where: { id },
-      relations: ['county', 'certificates']
+      include: { county: true, certificates: true }
     });
   }
 
   async activateAuction(id: string): Promise<Auction | null> {
-    const auction = await this.findById(id);
-    if (!auction) {
-      return null;
+    try {
+      return await prisma.auction.update({
+        where: { id: id, status: 'scheduled' },
+        data: { status: 'active' },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        console.warn(`Auction ${id} not found or not in scheduled state for activation.`);
+        return null;
+      }
+      console.error("Error activating auction:", error);
+      throw error;
     }
-    if (auction.status !== AuctionStatus.UPCOMING) {
-      // Only allow activation from UPCOMING
-      return null;
-    }
-    auction.status = AuctionStatus.ACTIVE;
-    return this.repository.save(auction);
   }
 
   async completeAuction(id: string): Promise<Auction | null> {
-    const auction = await this.findById(id);
-    if (!auction) {
-      return null;
+    try {
+      return await prisma.auction.update({
+        where: { id: id, status: 'active' },
+        data: { status: 'closed' },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        console.warn(`Auction ${id} not found or not in active state for completion.`);
+        return null;
+      }
+      console.error("Error completing auction:", error);
+      throw error;
     }
-    if (auction.status !== AuctionStatus.ACTIVE) {
-      // Only allow completion from ACTIVE
-      return null;
-    }
-    auction.status = AuctionStatus.COMPLETED;
-    return this.repository.save(auction);
   }
 
   async cancelAuction(id: string): Promise<Auction | null> {
-    const auction = await this.findById(id);
-    if (!auction) {
-      return null;
+    try {
+      const auction = await this.findById(id);
+      if (!auction) {
+        console.warn(`Auction ${id} not found for cancellation.`);
+        return null;
+      }
+      if (auction.status !== 'scheduled' && auction.status !== 'active') {
+        console.warn(`Auction ${id} cannot be cancelled from status ${auction.status}.`);
+        return null;
+      }
+      return await prisma.auction.update({
+        where: { id: id },
+        data: { status: 'cancelled' },
+      });
+    } catch (error) {
+      console.error("Error cancelling auction:", error);
+      throw error;
     }
-    if (auction.status !== AuctionStatus.UPCOMING && auction.status !== AuctionStatus.ACTIVE) {
-      // Only allow cancellation from UPCOMING or ACTIVE
-      return null;
-    }
-    auction.status = AuctionStatus.CANCELLED;
-    return this.repository.save(auction);
   }
 }
 

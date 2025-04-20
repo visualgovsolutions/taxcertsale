@@ -1,68 +1,83 @@
-import { Repository } from 'typeorm';
-import { AppDataSource } from '../config/database';
-import { County } from '../models/entities';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma';
+import type { County } from '../generated/prisma';
 
 class CountyRepository {
-  private repository: Repository<County>;
-
-  constructor() {
-    this.repository = AppDataSource.getRepository(County);
-  }
-
   async findAll(): Promise<County[]> {
-    return this.repository.find();
+    return prisma.county.findMany({
+      orderBy: { name: 'asc' }
+    });
   }
 
   async findById(id: string): Promise<County | null> {
-    return this.repository.findOneBy({ id });
+    return prisma.county.findUnique({ where: { id } });
   }
 
   async findByName(name: string): Promise<County | null> {
-    return this.repository.findOneBy({ name });
+    return prisma.county.findUnique({ where: { name } });
   }
 
   async findByState(state: string): Promise<County[]> {
-    return this.repository.findBy({ state });
+    return prisma.county.findMany({ where: { state } });
   }
 
-  async create(countyData: Partial<County>): Promise<County> {
-    const county = this.repository.create(countyData);
-    return this.repository.save(county);
+  async create(countyData: Prisma.CountyCreateInput): Promise<County> {
+    return prisma.county.create({ data: countyData });
   }
 
-  async update(id: string, countyData: Partial<County>): Promise<County | null> {
-    const updateResult = await this.repository.update(id, countyData);
-    
-    if (updateResult.affected === 0) {
-      return null;
+  async update(id: string, countyData: Prisma.CountyUpdateInput): Promise<County | null> {
+    try {
+      return await prisma.county.update({
+        where: { id },
+        data: countyData,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      console.error("Error updating county:", error);
+      throw error; 
     }
-    
-    return this.findById(id);
   }
 
   async delete(id: string): Promise<boolean> {
-    const deleteResult = await this.repository.delete(id);
-    return deleteResult.affected ? deleteResult.affected > 0 : false;
+    try {
+      await prisma.county.delete({ where: { id } });
+      return true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return false;
+      }
+      console.error("Error deleting county:", error);
+      throw error; 
+    }
   }
 
   async findWithProperties(id: string): Promise<County | null> {
-    return this.repository.findOne({
+    return prisma.county.findUnique({
       where: { id },
-      relations: ['properties']
+      include: { properties: true }
     });
   }
 
   async findWithCertificates(id: string): Promise<County | null> {
-    return this.repository.findOne({
+    return prisma.county.findUnique({
       where: { id },
-      relations: ['certificates']
+      include: { certificates: true }
     });
   }
 
   async findWithAuctions(id: string): Promise<County | null> {
-    return this.repository.findOne({
+    return prisma.county.findUnique({
       where: { id },
-      relations: ['auctions']
+      include: { auctions: true }
+    });
+  }
+
+  async findWithRelations(id: string): Promise<County | null> {
+    return prisma.county.findUnique({
+      where: { id },
+      include: { properties: true, auctions: true, certificates: true }
     });
   }
 }

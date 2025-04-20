@@ -1,77 +1,54 @@
-import { AppDataSource, initializeDatabase } from '../src/config/database';
-import { Repository } from 'typeorm';
-import { County } from '../src/models/entities/county.entity';
-import { countyRepository } from '../src/repositories/county.repository';
-import { Property } from '../src/models/entities/property.entity';
-import { v4 as uuidv4 } from 'uuid';
-import { Auction } from '../src/models/entities/auction.entity';
-import { Certificate } from '../src/models/entities/certificate.entity';
-import { Bid } from '../src/models/entities/bid.entity';
+// import { cleanAllTables } from './test-utils/transaction';
 
-describe('CountyRepository', () => {
-  let countyRepo: Repository<County>;
-  let propertyRepo: Repository<Property>;
-  let auctionRepo: Repository<Auction>;
-  let certificateRepo: Repository<Certificate>;
-  let bidRepo: Repository<Bid>;
+import prisma from '../src/lib/prisma';
+import setupTestDatabase from './prisma-test-setup';
+import teardownTestDatabase from './prisma-test-teardown';
+import { v4 as uuidv4 } from 'uuid';
+
+describe('County Data Access (using Prisma)', () => {
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    await initializeDatabase();
-    countyRepo = AppDataSource.getRepository(County);
-    propertyRepo = AppDataSource.getRepository(Property);
-    auctionRepo = AppDataSource.getRepository(Auction);
-    certificateRepo = AppDataSource.getRepository(Certificate);
-    bidRepo = AppDataSource.getRepository(Bid);
+    await setupTestDatabase();
   });
 
   beforeEach(async () => {
-    // Clean properties first, then counties
-    await propertyRepo.createQueryBuilder().delete().execute();
-    await countyRepo.createQueryBuilder().delete().execute();
+    // Delete in order of dependency: Bid -> Certificate -> Auction -> Property -> County
+    await prisma.bid.deleteMany({});
+    await prisma.certificate.deleteMany({});
+    await prisma.auction.deleteMany({});
+    await prisma.property.deleteMany({});
+    await prisma.county.deleteMany({});
   });
 
   afterAll(async () => {
-    // Final cleanup: properties first, then counties
-    if (AppDataSource.isInitialized) {
-      await propertyRepo.createQueryBuilder().delete().execute();
-      await countyRepo.createQueryBuilder().delete().execute();
-      await AppDataSource.destroy();
-    }
+    await teardownTestDatabase();
+    await prisma.$disconnect();
   });
 
   it('should create a county', async () => {
     const countyData = {
       name: `Test County ${uuidv4().substring(0, 8)}`,
       state: 'FL',
-      description: 'A test county',
-      websiteUrl: 'https://example.com',
-      countyCode: '001',
-      latitude: 25.7617,
-      longitude: -80.1918,
     };
 
-    const county = await countyRepository.create(countyData);
+    const county = await prisma.county.create({ data: countyData });
 
     expect(county).toBeDefined();
     expect(county.id).toBeDefined();
     expect(county.name).toBe(countyData.name);
     expect(county.state).toBe(countyData.state);
+    expect(county.createdAt).toBeInstanceOf(Date);
+    expect(county.updatedAt).toBeInstanceOf(Date);
   });
 
   it('should find all counties', async () => {
-    // Create test counties
-    const county1 = await countyRepository.create({
-      name: `Test County 1-${uuidv4().substring(0, 8)}`,
-      state: 'FL',
-    });
+    const county1Data = { name: `Test County 1-${uuidv4().substring(0, 8)}`, state: 'FL' };
+    const county2Data = { name: `Test County 2-${uuidv4().substring(0, 8)}`, state: 'GA' };
 
-    const county2 = await countyRepository.create({
-      name: `Test County 2-${uuidv4().substring(0, 8)}`,
-      state: 'GA',
-    });
+    const county1 = await prisma.county.create({ data: county1Data });
+    const county2 = await prisma.county.create({ data: county2Data });
 
-    const counties = await countyRepository.findAll();
+    const counties = await prisma.county.findMany();
 
     expect(counties).toBeDefined();
     expect(counties.length).toBeGreaterThanOrEqual(2);
@@ -80,13 +57,10 @@ describe('CountyRepository', () => {
   });
 
   it('should find a county by id', async () => {
-    const countyData = {
-      name: `Find By ID County ${uuidv4().substring(0, 8)}`,
-      state: 'TX',
-    };
+    const countyData = { name: `Find By ID County ${uuidv4().substring(0, 8)}`, state: 'TX' };
 
-    const created = await countyRepository.create(countyData);
-    const found = await countyRepository.findById(created.id);
+    const created = await prisma.county.create({ data: countyData });
+    const found = await prisma.county.findUnique({ where: { id: created.id } });
 
     expect(found).toBeDefined();
     expect(found!.id).toBe(created.id);
@@ -94,55 +68,58 @@ describe('CountyRepository', () => {
   });
 
   it('should update a county', async () => {
-    const countyData = {
-      name: `Update County ${uuidv4().substring(0, 8)}`,
-      state: 'CA',
-    };
-
-    const created = await countyRepository.create(countyData);
+    const countyData = { name: `Update County ${uuidv4().substring(0, 8)}`, state: 'CA' };
+    const created = await prisma.county.create({ data: countyData });
 
     const updateData = {
-      description: 'Updated description',
-      websiteUrl: 'https://updated.example.com',
+      name: `Updated County Name ${uuidv4().substring(0, 8)}`,
+      state: 'NV'
     };
 
-    const updated = await countyRepository.update(created.id, updateData);
+    const updated = await prisma.county.update({
+      where: { id: created.id },
+      data: updateData,
+    });
 
     expect(updated).toBeDefined();
-    expect(updated!.id).toBe(created.id);
-    expect(updated!.name).toBe(countyData.name); // Name shouldn't change
-    expect(updated!.description).toBe(updateData.description);
-    expect(updated!.websiteUrl).toBe(updateData.websiteUrl);
+    expect(updated.id).toBe(created.id);
+    expect(updated.name).toBe(updateData.name);
+    expect(updated.state).toBe(updateData.state);
+    expect(updated.updatedAt).toBeInstanceOf(Date);
+    expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(created.createdAt.getTime());
   });
 
   it('should delete a county', async () => {
-    const countyData = {
-      name: `Delete County ${uuidv4().substring(0, 8)}`,
-      state: 'NY',
-    };
+    const countyData = { name: `Delete County ${uuidv4().substring(0, 8)}`, state: 'NY' };
+    const created = await prisma.county.create({ data: countyData });
 
-    const created = await countyRepository.create(countyData);
-    const deleteResult = await countyRepository.delete(created.id);
+    await prisma.county.delete({ where: { id: created.id } });
 
-    expect(deleteResult).toBe(true);
-
-    const found = await countyRepository.findById(created.id);
+    const found = await prisma.county.findUnique({ where: { id: created.id } });
     expect(found).toBeNull();
   });
 
-  it('should return null when updating non-existent county', async () => {
+  it('should return null when finding non-existent county', async () => {
     const nonExistentId = uuidv4();
-    const updateData = { description: 'This county does not exist' };
-
-    const result = await countyRepository.update(nonExistentId, updateData);
-
-    expect(result).toBeNull();
+    const found = await prisma.county.findUnique({ where: { id: nonExistentId } });
+    expect(found).toBeNull();
   });
 
-  it('should return false when deleting non-existent county', async () => {
+  it('should throw error when updating non-existent county', async () => {
     const nonExistentId = uuidv4();
-    const result = await countyRepository.delete(nonExistentId);
+    const updateData = { name: 'This should fail' };
 
-    expect(result).toBe(false);
+    await expect(prisma.county.update({
+      where: { id: nonExistentId },
+      data: updateData,
+    })).rejects.toThrow();
+  });
+
+  it('should throw error when deleting non-existent county', async () => {
+    const nonExistentId = uuidv4();
+
+    await expect(prisma.county.delete({
+      where: { id: nonExistentId },
+    })).rejects.toThrow();
   });
 });

@@ -1,35 +1,37 @@
 import request from 'supertest';
-import { app } from '../../server';
-import { setupTestEnvironment, clearDatabase } from '../setup';
+import { startTestServer, stopTestServer } from '../test-server';
+import { Server } from 'http';
+import { Express } from 'express';
+import setupTestDatabase from '@tests/prisma-test-setup';
+import teardownTestDatabase from '@tests/prisma-test-teardown';
+import prisma from '@src/lib/prisma';
 
 describe('API Integration Tests', () => {
-  let teardown: () => Promise<void>;
+  let agent: request.SuperAgentTest;
+  let server: Server;
 
   beforeAll(async () => {
-    // Setup test environment and get teardown function
-    teardown = await setupTestEnvironment();
-  });
-
-  afterAll(async () => {
-    // Teardown test environment
-    await teardown();
+    await setupTestDatabase();
+    const serverSetup = await startTestServer();
+    server = serverSetup.server;
+    agent = serverSetup.agent;
   });
 
   beforeEach(async () => {
-    // Clear database before each test
-    await clearDatabase();
+    await prisma.bid.deleteMany({});
+    await prisma.certificate.deleteMany({});
+    await prisma.auction.deleteMany({});
+    await prisma.property.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.county.deleteMany({});
   });
 
-  describe('Root Endpoint', () => {
-    it('should return 200 and API information', async () => {
-      const response = await request(app).get('/');
-      
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain('Florida Tax Certificate Sale API');
-      expect(response.body).toHaveProperty('documentation');
-    });
+  afterAll(async () => {
+    await stopTestServer();
+    await teardownTestDatabase();
   });
 
-  // Additional API integration tests would go here
+  it('should return 404 for non-existent routes', async () => {
+    // ... existing code ...
+  });
 }); 

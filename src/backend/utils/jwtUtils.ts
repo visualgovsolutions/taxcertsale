@@ -1,18 +1,22 @@
 import jwt from 'jsonwebtoken';
 import config from '../../config/index';
+import { UserRole } from '../../models/entities/user.entity';
 
 interface JwtPayload {
-  userId: string; // Or ObjectId, depending on your User model
-  // Add other relevant claims like role, email, etc. as needed
-  // role?: string;
+  userId: string; // User's unique identifier
+  email: string; // User's email address
+  role: UserRole; // User's role for permission checks
+  // Additional optional fields
+  firstName?: string; 
+  lastName?: string;
 }
 
 const ACCESS_TOKEN_SECRET = config.jwt.secret;
 const ACCESS_TOKEN_EXPIRES_IN = config.jwt.expiresIn || '1h'; // Default to 1 hour
 
 /**
- * Generates a JWT access token.
- * @param payload - The payload to include in the token.
+ * Generates a JWT access token with user information including role.
+ * @param payload - The payload to include in the token (userId, email, role).
  * @returns The generated JWT string.
  */
 export const generateAccessToken = (payload: JwtPayload): string => {
@@ -25,7 +29,7 @@ export const generateAccessToken = (payload: JwtPayload): string => {
 };
 
 /**
- * Verifies a JWT access token.
+ * Verifies a JWT access token and returns user info with role.
  * @param token - The JWT string to verify.
  * @returns The decoded payload if the token is valid.
  * @throws JsonWebTokenError if the token is invalid or expired.

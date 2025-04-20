@@ -1,133 +1,90 @@
-import { Repository } from 'typeorm';
-import { AppDataSource } from '../config/database';
-import { Certificate } from '../models/entities';
-import { CertificateStatus } from '../models/entities/certificate.entity';
+import { PrismaClient, Prisma } from '../generated/prisma';
+import prisma from '../lib/prisma';
 
 class CertificateRepository {
-  private repository: Repository<Certificate>;
+  private prisma: PrismaClient;
 
   constructor() {
-    this.repository = AppDataSource.getRepository(Certificate);
+    this.prisma = prisma;
   }
 
-  async findAll(): Promise<Certificate[]> {
-    return this.repository.find();
+  async create(data: Prisma.CertificateUncheckedCreateInput) {
+    return this.prisma.certificate.create({ data });
   }
 
-  async findById(id: string): Promise<Certificate | null> {
-    return this.repository.findOneBy({ id });
+  async findById(id: string) {
+    return this.prisma.certificate.findUnique({ where: { id } });
   }
 
-  async findByCertificateNumber(certificateNumber: string): Promise<Certificate | null> {
-    return this.repository.findOneBy({ certificateNumber });
-  }
-
-  async findByCounty(countyId: string): Promise<Certificate[]> {
-    return this.repository.findBy({ countyId });
-  }
-
-  async findByAuction(auctionId: string): Promise<Certificate[]> {
-    return this.repository.findBy({ auctionId });
-  }
-
-  async findByProperty(propertyId: string): Promise<Certificate[]> {
-    return this.repository.findBy({ propertyId });
-  }
-
-  async findByStatus(status: CertificateStatus): Promise<Certificate[]> {
-    return this.repository.findBy({ status });
-  }
-
-  async create(certificateData: Partial<Certificate>): Promise<Certificate> {
-    const certificate = this.repository.create(certificateData);
-    return this.repository.save(certificate);
-  }
-
-  async update(id: string, certificateData: Partial<Certificate>): Promise<Certificate | null> {
-    const updateResult = await this.repository.update(id, certificateData);
-    
-    if (updateResult.affected === 0) {
-      return null;
+  async update(id: string, data: Prisma.CertificateUpdateInput) {
+    try {
+      return await this.prisma.certificate.update({ where: { id }, data });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
     }
-    
-    return this.findById(id);
   }
 
-  async delete(id: string): Promise<boolean> {
-    const deleteResult = await this.repository.delete(id);
-    return deleteResult.affected ? deleteResult.affected > 0 : false;
+  async delete(id: string) {
+    try {
+      return await this.prisma.certificate.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
   }
 
-  async findWithRelations(id: string): Promise<Certificate | null> {
-    return this.repository.findOne({
-      where: { id },
-      relations: ['county', 'property', 'auction']
-    });
+  async findByCounty(countyId: string) {
+    return this.prisma.certificate.findMany({ where: { countyId } });
   }
 
-  async findByDateRange(startDate: Date, endDate: Date): Promise<Certificate[]> {
-    return this.repository.createQueryBuilder('certificate')
-      .where('certificate.issueDate >= :startDate', { startDate })
-      .andWhere('certificate.issueDate <= :endDate', { endDate })
-      .getMany();
+  async findByStatus(status: string) {
+    const whereClause: Prisma.CertificateWhereInput = { status };
+    return this.prisma.certificate.findMany({ where: whereClause });
   }
 
-  async findByInterestRange(minRate: number, maxRate: number): Promise<Certificate[]> {
-    return this.repository.createQueryBuilder('certificate')
-      .where('certificate.interestRate >= :minRate', { minRate })
-      .andWhere('certificate.interestRate <= :maxRate', { maxRate })
-      .getMany();
-  }
-
-  async searchCertificates(
-    searchParams: {
+  async getCertificates(
+    filter: {
       countyId?: string;
-      status?: CertificateStatus;
-      minInterestRate?: number;
-      maxInterestRate?: number;
+      status?: string;
       minFaceValue?: number;
-      maxFaceValue?: number;
-      startDate?: Date;
-      endDate?: Date;
+      purchaseDate?: Date;
+    } = {},
+    pagination: { skip?: number; take?: number } = {},
+    orderBy: Prisma.CertificateOrderByWithRelationInput = { createdAt: 'desc' }
+  ) {
+    const where: Prisma.CertificateWhereInput = {};
+
+    if (filter.countyId) {
+      where.countyId = filter.countyId;
     }
-  ): Promise<Certificate[]> {
-    const queryBuilder = this.repository.createQueryBuilder('certificate');
-    
-    if (searchParams.countyId) {
-      queryBuilder.andWhere('certificate.countyId = :countyId', { countyId: searchParams.countyId });
+    if (filter.status) {
+      where.status = filter.status;
     }
-    
-    if (searchParams.status) {
-      queryBuilder.andWhere('certificate.status = :status', { status: searchParams.status });
+    if (filter.minFaceValue !== undefined) {
+      where.faceValue = { gte: filter.minFaceValue };
     }
-    
-    if (searchParams.minInterestRate) {
-      queryBuilder.andWhere('certificate.interestRate >= :minRate', { minRate: searchParams.minInterestRate });
+    if (filter.purchaseDate) {
+      where.purchaseDate = { gte: filter.purchaseDate };
     }
-    
-    if (searchParams.maxInterestRate) {
-      queryBuilder.andWhere('certificate.interestRate <= :maxRate', { maxRate: searchParams.maxInterestRate });
-    }
-    
-    if (searchParams.minFaceValue) {
-      queryBuilder.andWhere('certificate.faceValue >= :minValue', { minValue: searchParams.minFaceValue });
-    }
-    
-    if (searchParams.maxFaceValue) {
-      queryBuilder.andWhere('certificate.faceValue <= :maxValue', { maxValue: searchParams.maxFaceValue });
-    }
-    
-    if (searchParams.startDate) {
-      queryBuilder.andWhere('certificate.issueDate >= :startDate', { startDate: searchParams.startDate });
-    }
-    
-    if (searchParams.endDate) {
-      queryBuilder.andWhere('certificate.issueDate <= :endDate', { endDate: searchParams.endDate });
-    }
-    
-    return queryBuilder.getMany();
+
+    return this.prisma.certificate.findMany({
+      where,
+      skip: pagination.skip,
+      take: pagination.take,
+      orderBy,
+      include: {
+          county: true,
+          property: true,
+          auction: true,
+          bids: true
+      }
+    });
   }
 }
 
-export const certificateRepository = new CertificateRepository();
-export default certificateRepository; 
+export default new CertificateRepository(); 

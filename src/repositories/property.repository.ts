@@ -1,76 +1,94 @@
-import { Repository, ILike } from 'typeorm';
-import { AppDataSource } from '../config/database';
-import { Property } from '../models/entities';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma';
+import type { Property } from '../generated/prisma';
 
 class PropertyRepository {
-  private repository: Repository<Property>;
-
-  constructor() {
-    this.repository = AppDataSource.getRepository(Property);
-  }
 
   async findAll(): Promise<Property[]> {
-    return this.repository.find();
+    return prisma.property.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
   async findById(id: string): Promise<Property | null> {
-    return this.repository.findOneBy({ id });
-  }
-
-  async findByParcelId(parcelId: string): Promise<Property | null> {
-    return this.repository.findOneBy({ parcelId });
+    return prisma.property.findUnique({ where: { id } });
   }
 
   async findByCounty(countyId: string): Promise<Property[]> {
-    return this.repository.findBy({ countyId });
+    return prisma.property.findMany({
+      where: { countyId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async findByParcelId(parcelId: string): Promise<Property | null> {
+    return prisma.property.findUnique({ where: { parcelId } });
   }
 
   async findByAddress(address: string): Promise<Property[]> {
-    return this.repository.findBy({ address: ILike(`%${address}%`) });
+    return prisma.property.findMany({
+      where: { address: { contains: address, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
-  async findByOwner(ownerName: string): Promise<Property[]> {
-    return this.repository.findBy({ ownerName: ILike(`%${ownerName}%`) });
+  async create(propertyData: Prisma.PropertyCreateInput): Promise<Property> {
+    return prisma.property.create({ data: propertyData });
   }
 
-  async create(propertyData: Partial<Property>): Promise<Property> {
-    const property = this.repository.create(propertyData);
-    return this.repository.save(property);
-  }
-
-  async update(id: string, propertyData: Partial<Property>): Promise<Property | null> {
-    const updateResult = await this.repository.update(id, propertyData);
-    
-    if (updateResult.affected === 0) {
-      return null;
+  async update(id: string, propertyData: Prisma.PropertyUpdateInput): Promise<Property | null> {
+    try {
+      return await prisma.property.update({
+        where: { id },
+        data: propertyData,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      console.error("Error updating property:", error);
+      throw error;
     }
-    
-    return this.findById(id);
   }
 
   async delete(id: string): Promise<boolean> {
-    const deleteResult = await this.repository.delete(id);
-    return deleteResult.affected ? deleteResult.affected > 0 : false;
+    try {
+      await prisma.property.delete({ where: { id } });
+      return true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return false;
+      }
+      console.error("Error deleting property:", error);
+      throw error;
+    }
   }
 
   async findWithCertificates(id: string): Promise<Property | null> {
-    return this.repository.findOne({
+    return prisma.property.findUnique({
       where: { id },
-      relations: ['certificates']
+      include: { certificates: true }
     });
   }
 
   async findWithCounty(id: string): Promise<Property | null> {
-    return this.repository.findOne({
+    return prisma.property.findUnique({
       where: { id },
-      relations: ['county']
+      include: { county: true }
     });
   }
 
   async findWithRelations(id: string): Promise<Property | null> {
-    return this.repository.findOne({
+    return prisma.property.findUnique({
       where: { id },
-      relations: ['county', 'certificates']
+      include: { county: true, certificates: true }
+    });
+  }
+
+  async search(criteria: Prisma.PropertyWhereInput): Promise<Property[]> {
+    return prisma.property.findMany({
+      where: criteria,
+      orderBy: { createdAt: 'desc' }
     });
   }
 
@@ -79,58 +97,24 @@ class PropertyRepository {
       countyId?: string;
       address?: string;
       parcelId?: string;
-      ownerName?: string;
-      propertyType?: string;
-      zoning?: string;
-      minLandArea?: number;
-      maxLandArea?: number;
-      minBuildingArea?: number;
-      maxBuildingArea?: number;
     }
   ): Promise<Property[]> {
-    const queryBuilder = this.repository.createQueryBuilder('property');
-    
+    const whereClause: Prisma.PropertyWhereInput = {};
+
     if (searchParams.countyId) {
-      queryBuilder.andWhere('property.countyId = :countyId', { countyId: searchParams.countyId });
+      whereClause.countyId = searchParams.countyId;
     }
-    
     if (searchParams.address) {
-      queryBuilder.andWhere('property.address ILIKE :address', { address: `%${searchParams.address}%` });
+      whereClause.address = { contains: searchParams.address, mode: 'insensitive' };
     }
-    
     if (searchParams.parcelId) {
-      queryBuilder.andWhere('property.parcelId ILIKE :parcelId', { parcelId: `%${searchParams.parcelId}%` });
+      whereClause.parcelId = { contains: searchParams.parcelId, mode: 'insensitive' };
     }
-    
-    if (searchParams.ownerName) {
-      queryBuilder.andWhere('property.ownerName ILIKE :ownerName', { ownerName: `%${searchParams.ownerName}%` });
-    }
-    
-    if (searchParams.propertyType) {
-      queryBuilder.andWhere('property.propertyType = :propertyType', { propertyType: searchParams.propertyType });
-    }
-    
-    if (searchParams.zoning) {
-      queryBuilder.andWhere('property.zoning = :zoning', { zoning: searchParams.zoning });
-    }
-    
-    if (searchParams.minLandArea) {
-      queryBuilder.andWhere('property.landArea >= :minLandArea', { minLandArea: searchParams.minLandArea });
-    }
-    
-    if (searchParams.maxLandArea) {
-      queryBuilder.andWhere('property.landArea <= :maxLandArea', { maxLandArea: searchParams.maxLandArea });
-    }
-    
-    if (searchParams.minBuildingArea) {
-      queryBuilder.andWhere('property.buildingArea >= :minBuildingArea', { minBuildingArea: searchParams.minBuildingArea });
-    }
-    
-    if (searchParams.maxBuildingArea) {
-      queryBuilder.andWhere('property.buildingArea <= :maxBuildingArea', { maxBuildingArea: searchParams.maxBuildingArea });
-    }
-    
-    return queryBuilder.getMany();
+
+    return prisma.property.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' }
+    });
   }
 }
 

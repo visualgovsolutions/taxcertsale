@@ -1,3 +1,63 @@
+## Current Focus: Admin & Bidder UI Build-Out
+
+### ✅ Completed
+- Backend CRUD, GraphQL, and integration tests are robust and passing.
+- Teardown and open handle issues resolved (Jest forceExit enabled).
+- Logon page and basic authentication flow scaffolded.
+
+### 🚧 In Progress / Next Steps
+
+#### 1. **Admin Dashboard UI**
+- [ ] Admin Dashboard Overview Page
+- [ ] Auction Management Page (list, create, edit, activate, close, cancel)
+- [ ] Certificate Management Page (list, assign, mark as redeemed)
+- [ ] User Management Page (list, roles, permissions) *(optional)*
+- [ ] Admin Navigation (sidebar/header)
+- [ ] Admin Stats/Analytics Widgets
+
+#### 2. **Bidder Dashboard UI**
+- [ ] Bidder Dashboard Overview Page
+- [ ] My Auctions (active, upcoming, past)
+- [ ] My Certificates (won, redeemed, pending)
+- [ ] Bidding Interface/Component
+
+#### 3. **Logon & Auth**
+- [x] Logon Page (UI present, needs full integration)
+- [ ] Auth integration with backend (JWT/session)
+- [ ] Role-based routing (admin vs. bidder)
+
+#### 4. **Testing**
+- [ ] Add/expand tests for new UI components and flows
+- [ ] E2E tests for login, dashboard, and auction actions
+
+---
+
+## 🧩 Component Breakdown for Admin UI
+
+### Pages
+- `AdminDashboardPage`
+- `AuctionManagementPage`
+- `CertificateManagementPage`
+- `UserManagementPage` *(optional)*
+- `BidderDashboardPage`
+- `LoginPage`
+
+### Components
+- `SidebarNav` (admin navigation)
+- `HeaderBar` (top bar, user info, logout)
+- `AuctionListTable`
+- `AuctionDetailModal` / `AuctionForm`
+- `CertificateListTable`
+- `CertificateDetailModal`
+- `UserListTable` *(optional)*
+- `StatsWidget` (for dashboard KPIs)
+- `BidTable` (for bidder dashboard)
+- `BidActionPanel` (place bid, view status)
+- `RoleProtectedRoute` (route guard for admin/bidder)
+- `NotificationBanner` (for system messages)
+
+---
+
 # Level 4 Implementation Tasks
 
 ## Status

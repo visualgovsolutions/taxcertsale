@@ -1,13 +1,29 @@
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-// import express from 'express'; // Unused import
+import express from 'express';
 import http from 'http';
+import cors from 'cors';
+import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import resolvers from './resolvers';
 import config from '../../config/index';
 import { Request, Response } from 'express'; // Import Request and Response for context
+import { verifyAccessToken } from '../utils/jwtUtils';
+import { UserRole } from '../../models/entities/user.entity';
+
+// Define our GraphQL context type
+export interface GraphQLContext {
+  user?: {
+    userId: string;
+    email: string;
+    role: UserRole;
+    firstName?: string;
+    lastName?: string;
+  };
+  isAuthenticated: boolean;
+}
 
 // Define context type (can be expanded later)
 export interface MyContext {
@@ -25,8 +41,8 @@ const typeDefs = fs.readFileSync(path.join(__dirname, 'schema.graphql'), 'utf-8'
  * @param httpServer - The HTTP server instance from Express app.
  * @returns An initialized Apollo Server instance.
  */
-const createApolloServer = (httpServer: http.Server): ApolloServer<MyContext> => {
-  const server = new ApolloServer<MyContext>({
+const createApolloServer = (httpServer: http.Server): ApolloServer<GraphQLContext> => {
+  const server = new ApolloServer<GraphQLContext>({
     typeDefs,
     resolvers,
     introspection: config.server.nodeEnv !== 'production', // Enable introspection only in non-prod
@@ -56,13 +72,32 @@ const createApolloServer = (httpServer: http.Server): ApolloServer<MyContext> =>
  * @param server - The initialized Apollo Server instance.
  * @returns Express middleware function.
  */
-const createApolloMiddleware = (server: ApolloServer<MyContext>) => {
+const createApolloMiddleware = (server: ApolloServer<GraphQLContext>) => {
   return expressMiddleware(server, {
-    context: async ({ req, res }): Promise<MyContext> => {
-      // Basic context with request and response objects
-      // Authentication logic can be added here to extract user from token (req.user)
-      // const user = req.user; // Assuming authMiddleware runs before this
-      return { req, res /*, user*/ };
+    context: async ({ req }): Promise<GraphQLContext> => {
+      // Get the auth token from the Authorization header
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.split(' ')[1]; // Bearer TOKEN format
+      
+      // Default context with no authentication
+      const context: GraphQLContext = {
+        isAuthenticated: false
+      };
+      
+      // If token exists, verify it and add user info to context
+      if (token) {
+        try {
+          const user = verifyAccessToken(token);
+          context.user = user;
+          context.isAuthenticated = true;
+        } catch (error) {
+          console.error('GraphQL Auth Error:', error);
+          // Don't throw here - just return unauthenticated context
+          // Resolvers will handle auth requirements
+        }
+      }
+      
+      return context;
     },
   });
 };

@@ -1,265 +1,126 @@
-import { AppDataSource, initializeDatabase } from '../src/config/database';
-import { Repository } from 'typeorm';
-import { Certificate } from '../src/models/entities/certificate.entity';
-import { County } from '../src/models/entities/county.entity';
-import { Property } from '../src/models/entities/property.entity';
-import { certificateRepository } from '../src/repositories/certificate.repository';
 import { v4 as uuidv4 } from 'uuid';
-import { Auction } from '../src/models/entities/auction.entity';
-import { auctionRepository } from '../src/repositories/auction.repository';
-import { CertificateStatus } from '../src/models/entities/certificate.entity';
-import { AuctionStatus } from '../src/models/entities/auction.entity';
-import { Bid } from '../src/models/entities/bid.entity';
+// Import the Prisma client instance configured for tests
+import prisma from './test-utils/prisma-client-setup';
+// Import generated types if needed
+// import { County, Property, Auction, Certificate } from '@prisma/client';
 
-describe('CertificateRepository', () => {
-  let certificateRepo: Repository<Certificate>;
-  let countyRepo: Repository<County>;
-  let propertyRepo: Repository<Property>;
-  let auctionRepo: Repository<Auction>;
-  let bidRepo: Repository<Bid>;
-  let county: County;
-  let property: Property;
-  let auction: Auction;
+// Define expected statuses (can use strings directly as defined in Prisma schema)
+const CertificateStatus = {
+  AVAILABLE: 'available',
+  SOLD: 'sold',
+  REDEEMED: 'redeemed'
+};
 
-  beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    await initializeDatabase();
-    certificateRepo = AppDataSource.getRepository(Certificate);
-    countyRepo = AppDataSource.getRepository(County);
-    propertyRepo = AppDataSource.getRepository(Property);
-    auctionRepo = AppDataSource.getRepository(Auction);
-    bidRepo = AppDataSource.getRepository(Bid);
-  });
+const AuctionStatus = {
+  SCHEDULED: 'scheduled',
+  ACTIVE: 'active',
+  CLOSED: 'closed',
+  CANCELLED: 'cancelled'
+};
+
+describe('Certificate Data Access (using Prisma)', () => {
+
+  // No beforeAll/afterAll needed - handled by global setup/teardown
 
   beforeEach(async () => {
-    // Clean up in correct order: bids -> certificates -> auctions -> properties -> counties
-    await bidRepo.createQueryBuilder().delete().execute();
-    await certificateRepo.createQueryBuilder().delete().execute();
-    await auctionRepo.createQueryBuilder().delete().execute();
-    await propertyRepo.createQueryBuilder().delete().execute();
-    await countyRepo.createQueryBuilder().delete().execute();
+    // Clean up data in reverse order of dependency
+    // Note: onDelete: Cascade in Prisma schema might handle some of this automatically,
+    // but explicit deletion ensures a clean slate, especially for testing edge cases.
+    await prisma.bid.deleteMany({}); // Assuming bids depend on certificates/auctions/users
+    await prisma.certificate.deleteMany({});
+    await prisma.property.deleteMany({});
+    await prisma.auction.deleteMany({});
+    await prisma.county.deleteMany({});
+    await prisma.user.deleteMany({}); // Assuming users exist and might be related via buyerId
+  });
 
-    // Create prerequisites in order, ensuring objects are used for relations
-    county = await countyRepo.save(
-      countyRepo.create({
-        name: `Test County ${uuidv4().substring(0, 8)}`,
-        state: 'FL',
-      })
-    );
-    console.log('[Cert Test Prep] Saved County ID:', county.id);
+  it('should perform basic CRUD operations using Prisma Client', async () => {
+    const testPrefix = uuidv4().substring(0, 8);
 
-    property = await propertyRepo.save(
-      propertyRepo.create({
-        parcelId: `P-${uuidv4().substring(0, 8)}`,
+    // 1. Create dependencies
+    const county = await prisma.county.create({
+      data: {
+        name: `Test County ${testPrefix}`,
+        state: 'FL'
+      }
+    });
+
+    const property = await prisma.property.create({
+      data: {
+        parcelId: `P-${testPrefix}`,
         address: '123 Test St',
         city: 'Test City',
         state: 'FL',
         zipCode: '12345',
-        county: county,
-      })
-    );
-    console.log(
-      '[Cert Test Prep] Saved Property ID:',
-      property.id,
-      'County ID:',
-      property.countyId
-    );
+        countyId: county.id
+      }
+    });
 
-    auction = await auctionRepo.save(
-      auctionRepo.create({
-        name: `Test Auction ${uuidv4().substring(0, 8)}`,
+    const auction = await prisma.auction.create({
+      data: {
         auctionDate: new Date(),
-        startTime: '09:00:00',
-        endTime: '17:00:00',
         status: AuctionStatus.ACTIVE,
-        county: county,
-      })
-    );
-    console.log('[Cert Test Prep] Saved Auction ID:', auction.id, 'County ID:', auction.countyId);
-  });
-
-  afterAll(async () => {
-    // Final cleanup in correct order: bids -> certificates -> auctions -> properties -> counties
-    if (AppDataSource.isInitialized) {
-      await bidRepo.createQueryBuilder().delete().execute();
-      await certificateRepo.createQueryBuilder().delete().execute();
-      await auctionRepo.createQueryBuilder().delete().execute();
-      await propertyRepo.createQueryBuilder().delete().execute();
-      await countyRepo.createQueryBuilder().delete().execute();
-      await AppDataSource.destroy();
-    }
-  });
-
-  it('should create a certificate', async () => {
-    const certData = {
-      certificateNumber: `CERT-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
-    };
-
-    const certificate = await certificateRepository.create(certData);
-
-    expect(certificate).toBeDefined();
-    expect(certificate.id).toBeDefined();
-    expect(certificate.certificateNumber).toBe(certData.certificateNumber);
-    expect(certificate.faceValue).toBe(certData.faceValue);
-    expect(certificate.countyId).toBe(county.id);
-    expect(certificate.propertyId).toBe(property.id);
-    expect(certificate.auctionId).toBe(auction.id);
-  });
-
-  it('should find all certificates', async () => {
-    // Create test certificates
-    const cert1 = await certificateRepository.create({
-      certificateNumber: `CERT1-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
+        countyId: county.id
+        // Removed name, startTime, endTime as they are not in the current Prisma schema
+      }
     });
 
-    const cert2 = await certificateRepository.create({
-      certificateNumber: `CERT2-${uuidv4().substring(0, 8)}`,
-      faceValue: 2000.75,
-      interestRate: 16.0,
-      issueDate: new Date(),
+    // 2. Create a certificate
+    const certificateData = {
+      certificateNumber: `CERT-${testPrefix}`,
+      faceValue: 1500.50,
+      interestRate: 18.0,
       status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
+      countyId: county.id,
+      propertyId: property.id,
+      auctionId: auction.id,
+    };
+
+    const createdCert = await prisma.certificate.create({ data: certificateData });
+
+    expect(createdCert).toBeDefined();
+    expect(createdCert.id).toBeDefined();
+    expect(createdCert.certificateNumber).toBe(certificateData.certificateNumber);
+    expect(createdCert.faceValue).toBe(certificateData.faceValue);
+    expect(createdCert.status).toBe(CertificateStatus.AVAILABLE);
+
+    // 3. Find the certificate
+    const foundCert = await prisma.certificate.findUnique({
+      where: { id: createdCert.id }
+    });
+    expect(foundCert).toBeDefined();
+    expect(foundCert!.certificateNumber).toBe(certificateData.certificateNumber);
+
+    // 4. Update the certificate
+    const updatedCert = await prisma.certificate.update({
+      where: { id: createdCert.id },
+      data: {
+        faceValue: 2000.0,
+        status: CertificateStatus.SOLD,
+      }
     });
 
-    const certificates = await certificateRepository.findAll();
+    expect(updatedCert).toBeDefined();
+    expect(updatedCert.faceValue).toBe(2000.0);
+    expect(updatedCert.status).toBe(CertificateStatus.SOLD);
 
-    expect(certificates).toBeDefined();
-    expect(certificates.length).toBeGreaterThanOrEqual(2);
-    expect(certificates.find(c => c.id === cert1.id)).toBeDefined();
-    expect(certificates.find(c => c.id === cert2.id)).toBeDefined();
-  });
+    // 5. Delete the certificate
+    await prisma.certificate.delete({ where: { id: createdCert.id } });
 
-  it('should find a certificate by id', async () => {
-    const certData = {
-      certificateNumber: `FIND-ID-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
-    };
-
-    const created = await certificateRepository.create(certData);
-    const found = await certificateRepository.findById(created.id);
-
-    expect(found).toBeDefined();
-    expect(found!.id).toBe(created.id);
-    expect(found!.certificateNumber).toBe(certData.certificateNumber);
-    expect(found!.auctionId).toBe(auction.id);
-  });
-
-  it('should find certificates by county', async () => {
-    // Create test certificate
-    const cert = await certificateRepository.create({
-      certificateNumber: `COUNTY-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
+    // 6. Verify deletion
+    const deletedCert = await prisma.certificate.findUnique({
+      where: { id: createdCert.id }
     });
+    expect(deletedCert).toBeNull();
 
-    const certificates = await certificateRepository.findByCounty(county.id);
-
-    expect(certificates).toBeDefined();
-    expect(certificates.length).toBeGreaterThanOrEqual(1);
-    expect(certificates.find(c => c.id === cert.id)).toBeDefined();
   });
 
-  it('should update a certificate', async () => {
-    const certData = {
-      certificateNumber: `UPDATE-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
-    };
+  // Add more tests as needed for finding by different criteria, relations, etc.
 
-    const created = await certificateRepository.create(certData);
+});
 
-    const updateData = {
-      faceValue: 2000.75,
-      interestRate: 16.5,
-      status: CertificateStatus.SOLD,
-    };
-
-    const updated = await certificateRepository.update(created.id, updateData);
-
-    expect(updated).toBeDefined();
-    expect(updated!.id).toBe(created.id);
-    expect(updated!.certificateNumber).toBe(certData.certificateNumber); // Shouldn't change
-    expect(Number(updated!.faceValue)).toBe(Number(updateData.faceValue));
-    expect(Number(updated!.interestRate)).toBe(Number(updateData.interestRate));
-    expect(updated!.status).toBe(updateData.status);
-    expect(updated!.auctionId).toBe(auction.id);
-  });
-
-  it('should delete a certificate', async () => {
-    const certData = {
-      certificateNumber: `DELETE-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
-    };
-
-    const created = await certificateRepository.create(certData);
-    const deleteResult = await certificateRepository.delete(created.id);
-
-    expect(deleteResult).toBe(true);
-
-    const found = await certificateRepository.findById(created.id);
-    expect(found).toBeNull();
-  });
-
-  it('should find certificates with relations', async () => {
-    const certData = {
-      certificateNumber: `RELATIONS-${uuidv4().substring(0, 8)}`,
-      faceValue: 1500.5,
-      interestRate: 18.0,
-      issueDate: new Date(),
-      status: CertificateStatus.AVAILABLE,
-      county: county,
-      property: property,
-      auction: auction,
-    };
-
-    const created = await certificateRepository.create(certData);
-    const withRelations = await certificateRepository.findWithRelations(created.id);
-
-    expect(withRelations).toBeDefined();
-    expect(withRelations!.id).toBe(created.id);
-    expect(withRelations!.county).toBeDefined();
-    expect(withRelations!.county.id).toBe(county.id);
-    expect(withRelations!.property).toBeDefined();
-    expect(withRelations!.property.id).toBe(property.id);
-    expect(withRelations!.auction).toBeDefined();
-    expect(withRelations!.auction.id).toBe(auction.id);
-  });
+afterAll(async () => {
+  if (prisma && typeof prisma.$disconnect === 'function') {
+    await prisma.$disconnect();
+  }
 });

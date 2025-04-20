@@ -85,3 +85,71 @@ console.error = (...args) => {
   }
   originalError.call(console, ...args);
 };
+
+// Set test environment variables
+process.env.REACT_APP_API_URL = 'http://localhost:4000';
+process.env.REACT_APP_WS_URL = 'ws://localhost:4000';
+process.env.NODE_ENV = 'test';
+
+// Increase test timeout
+jest.setTimeout(30000);
+
+// Mock fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+    blob: () => Promise.resolve(new Blob()),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    formData: () => Promise.resolve(new FormData()),
+  } as Response)
+);
+
+// Mock WebSocket
+class WebSocketMock {
+  onopen: ((event: Event) => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  readyState: number = WebSocket.CONNECTING;
+  url: string = '';
+
+  constructor(url: string) {
+    this.url = url;
+    setTimeout(() => {
+      this.readyState = WebSocket.OPEN;
+      if (this.onopen) this.onopen(new Event('open'));
+    }, 0);
+  }
+
+  send = jest.fn();
+  close = jest.fn();
+}
+
+(global as any).WebSocket = WebSocketMock;
+
+// Add custom matchers
+expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () =>
+          `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () =>
+          `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+});
+
+// Clear mocks after each test
+afterEach(() => {
+  jest.clearAllMocks();
+});

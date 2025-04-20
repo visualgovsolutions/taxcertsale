@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define models based on previous TypeORM entities
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String // Hashed password
+  email     String   @unique
+  role      String   @default("user") // e.g., "user", "admin"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bids Bid[]
+
+  @@map("users")
+}
+
+model County {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  state     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  properties Property[]
+  auctions   Auction[]
+  certificates Certificate[]
+
+  @@map("counties")
+}
+
+model Property {
+  id           String   @id @default(uuid())
+  parcelId     String   @unique @map("parcel_id") // Unique identifier for the property parcel
+  address      String
+  city         String
+  state        String
+  zipCode      String   @map("zip_code")
+  legalDescription String? @map("legal_description")
+  countyId     String   @map("county_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  county       County       @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  certificates Certificate[]
+
+  @@map("properties")
+}
+
+model Auction {
+  id             String   @id @default(uuid())
+  countyId       String   @map("county_id")
+  auctionDate    DateTime @map("auction_date")
+  status         String   @default("scheduled") // e.g., scheduled, active, closed, cancelled
+  adUrl          String?  @map("ad_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  county         County        @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  certificates   Certificate[]
+  bids           Bid[]
+
+  @@map("auctions")
+}
+
+model Certificate {
+  id                 String   @id @default(uuid())
+  certificateNumber  String   @unique @map("certificate_number")
+  countyId           String   @map("county_id")
+  propertyId         String   @map("property_id")
+  auctionId          String   @map("auction_id")
+  status             String   @default("available") // e.g., available, sold, redeemed
+  faceValue          Float    @map("face_value") // Principal amount of the lien
+  interestRate       Float?   @map("interest_rate") // Interest rate bid/awarded
+  premium            Float?   // Premium bid/paid
+  buyerId            String?  @map("buyer_id") // ID of the user who bought it
+  purchaseDate       DateTime? @map("purchase_date")
+  redemptionDate     DateTime? @map("redemption_date")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  county             County    @relation(fields: [countyId], references: [id])
+  property           Property  @relation(fields: [propertyId], references: [id])
+  auction            Auction   @relation(fields: [auctionId], references: [id])
+  // Buyer relation optional, depends if User model exists and if buyer is tracked this way
+  // buyer           User?     @relation(fields: [buyerId], references: [id])
+  bids               Bid[]
+
+  @@map("certificates")
+}
+
+model Bid {
+  id            String   @id @default(uuid())
+  auctionId     String   @map("auction_id")
+  certificateId String   @map("certificate_id")
+  userId        String   @map("user_id")
+  bidAmount     Float    @map("bid_amount") // Could be interest rate or premium depending on auction type
+  bidType       String   @map("bid_type") // e.g., 'interest_rate', 'premium'
+  isWinningBid  Boolean  @default(false) @map("is_winning_bid")
+  bidTime       DateTime @default(now()) @map("bid_time")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  auction       Auction     @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bids")
+}
