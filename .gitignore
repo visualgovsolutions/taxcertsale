@@ -88,4 +88,16 @@ dev-debug.log
 # OS specific
 # Task files
 tasks.json
-tasks/ 
+tasks/
+
+# Generated Prisma Client
+src/generated/prisma/
+
+# Backup files
+*.bak
+*.backup
+*.custom
+
+# Screenshots / Test Output
+tests/screenshots/
+screenshot*.png 
