@@ -8,7 +8,7 @@
 ### 🚧 In Progress / Next Steps
 
 #### 1. **Admin Dashboard UI**
-- [ ] Admin Dashboard Overview Page
+- [🚧] Admin Dashboard Overview Page
 - [ ] Auction Management Page (list, create, edit, activate, close, cancel)
 - [ ] Certificate Management Page (list, assign, mark as redeemed)
 - [ ] User Management Page (list, roles, permissions) *(optional)*
@@ -23,7 +23,15 @@
 
 #### 3. **Logon & Auth**
 - [x] Logon Page (UI present, needs full integration)
-- [ ] Auth integration with backend (JWT/session)
+- [🚧] Auth integration with backend (JWT/session)
+  - [ ] Backend: Add AuthPayload type & login mutation
+  - [ ] Backend: Implement login resolver with bcrypt + JWT
+  - [ ] Backend: Add signAccessToken helper in jwtUtils
+  - [ ] Seed script: Create admin@visualgov.com, bidder01@visualgov.com, county@visualgov.com with hashed passwords
+  - [ ] Frontend: Replace mock login with real GraphQL login mutation
+  - [ ] Frontend: Store JWT in localStorage and update AuthContext
+  - [ ] Frontend: Update ProtectedRoute / auth checks to validate token expiry
+  - [ ] Tests: Add auth flow tests (login success/failure)
 - [ ] Role-based routing (admin vs. bidder)
 
 #### 4. **Testing**
