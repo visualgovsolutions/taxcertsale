@@ -26,7 +26,12 @@ module.exports = {
       {
         test: /\.(ts|tsx)$/,
         exclude: /node_modules/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: {
+            configFile: path.resolve(__dirname, 'tsconfig.json')
+          }
+        },
       },
       {
         test: /\.css$/,
@@ -75,6 +80,14 @@ module.exports = {
         pathRewrite: { '^/api': '' },
         secure: false,
         changeOrigin: true,
+      },
+      {
+        // Add proxy rule for GraphQL endpoint
+        context: ['/graphql'], 
+        target: 'http://localhost:8081', // Backend GraphQL server
+        secure: false, 
+        changeOrigin: true, 
+        // No pathRewrite needed as /graphql matches backend
       }
     ],
   },
