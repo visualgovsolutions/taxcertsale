@@ -54,6 +54,28 @@ async function testAppLayout() {
           console.log(`WARNING: 404 Not Found detected on login page (port ${port})`);
         }
         
+        // --- ADMIN PAGE TESTS ---
+        const adminPages = [
+          'dashboard',
+          'auctions',
+          'certificates',
+          'users',
+          'counties',
+          'registrations',
+          'audit-logs',
+          'settings',
+          'test' // <-- Added test page
+        ];
+        for (const pageName of adminPages) {
+          const url = `http://localhost:${port}/admin/${pageName}`;
+          console.log(`Testing ${url} on port ${port}:`);
+          await page.goto(url, { 
+            timeout: 5000,
+            waitUntil: 'domcontentloaded'
+          });
+          await page.screenshot({ path: path.join(screenshotsDir, `${pageName}-page-port-${port}.png`) });
+        }
+        
         // We've found a working port, so break out of the loop
         break;
       } catch (portError) {
