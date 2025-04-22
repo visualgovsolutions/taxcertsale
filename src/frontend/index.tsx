@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Use createRoot for React 18+
 import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
+import { ApolloProvider } from '@apollo/client'; // Import ApolloProvider
+import client from '../lib/apolloClient'; // Import the configured client
 import App from './App';
 import { AuthProvider } from './context/AuthContext'; // Import the AuthProvider
 // Import styles from their correct location
@@ -15,10 +17,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <ApolloProvider client={client}>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
+    </ApolloProvider>
   </React.StrictMode>
 ); 

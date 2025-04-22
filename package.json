@@ -21,7 +21,10 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky",
-    "test:ui": "node tests/puppeteer-runner.js"
+    "test:ui": "node tests/puppeteer-runner.js",
+    "validate-routes": "node ./scripts/validate-routes.js",
+    "precommit": "npm run validate-routes",
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -33,11 +36,14 @@
     ]
   },
   "dependencies": {
+    "@apollo/client": "^3.13.8",
     "@apollo/server": "^4.12.0",
     "@nestjs/common": "^11.0.20",
     "@nestjs/typeorm": "^11.0.0",
+    "@types/bcrypt": "^5.0.2",
     "autoprefixer": "^10.4.21",
     "axios": "^1.8.4",
+    "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cors": "^2.8.5",
