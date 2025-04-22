@@ -4,6 +4,18 @@ scalar JSON
 type Query {
   _empty: String # Placeholder field to ensure Query type is valid
   hello: String # Simple test query
+  auctions: [Auction!]! # Add the auctions query returning a list of Auctions
+  auction(id: ID!): Auction # Add the auction query returning a single Auction by ID
+  auctionsByCounty(countyId: String!): [Auction!]! # Add query to get auctions by county ID
+  upcomingAuctions: [Auction!]! # Add query to get upcoming auctions
+  activeAuctions: [Auction!]! # Add query to get active auctions
+  auctionsByStatus(status: AuctionStatus!): [Auction!]! # Add query to get auctions by status
+  auctionManagementData: AuctionManagementData! # Add management data query
+  counties: [County!]!
+  county(id: ID!): County
+  users: [User!]! # Query to get all users
+  user(id: ID!): User # Query to get a single user by ID
+  usersRegisteredTodayCount: Int! # Query for count of users registered today
 }
 
 # Base Mutation type (can be added later)
@@ -36,8 +48,104 @@ type Auction {
   updatedAt: String!
 }
 
+# --- User Types ---
+enum UserRole {
+  ADMIN
+  COUNTY_OFFICIAL
+  INVESTOR
+  USER # Added generic user based on Prisma default
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  role: UserRole! # Use the enum
+  createdAt: String! # Consider DateTime scalar
+  updatedAt: String! # Consider DateTime scalar
+  # DO NOT INCLUDE PASSWORD
+}
+
+input CreateUserInput {
+  username: String!
+  email: String!
+  role: UserRole! # Use the enum
+  password: String! # Password needed for creation, but won't be queried
+}
+
+input UpdateUserInput {
+  username: String
+  email: String
+  role: UserRole # Use the enum
+  # Password updates should likely be a separate, dedicated mutation
+}
+
 type Mutation {
   startAuction(id: ID!): Auction
   completeAuction(id: ID!): Auction
   cancelAuction(id: ID!): Auction
+  createCounty(input: CreateCountyInput!): County!
+  updateCounty(id: ID!, input: UpdateCountyInput!): County
+  deleteCounty(id: ID!): County
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User
+  deleteUser(id: ID!): User # Consider soft delete/status change later
+  login(email: String!, password: String!): AuthPayload!
+}
+
+# Management data type
+
+type AuctionManagementData {
+  activeAuctions: Int!
+  upcomingAuctions: Int!
+  completedAuctions: Int!
+  totalAuctions: Int!
+}
+
+# --- County Type ---
+type County {
+  id: ID!
+  name: String!
+  state: String!
+  countyCode: String!
+  websiteUrl: String
+  taxCollectorUrl: String
+  propertyAppraiserUrl: String
+  description: String
+  latitude: Float
+  longitude: Float
+  createdAt: String! # Consider using a DateTime scalar if needed
+  updatedAt: String! # Consider using a DateTime scalar if needed
+}
+
+# --- County Input Types ---
+input CreateCountyInput {
+  name: String!
+  state: String!
+  countyCode: String!
+  websiteUrl: String
+  taxCollectorUrl: String
+  propertyAppraiserUrl: String
+  description: String
+  latitude: Float
+  longitude: Float
+}
+
+input UpdateCountyInput {
+  name: String
+  state: String
+  countyCode: String
+  websiteUrl: String
+  taxCollectorUrl: String
+  propertyAppraiserUrl: String
+  description: String
+  latitude: Float
+  longitude: Float
+}
+
+# Auth Types
+
+type AuthPayload {
+  accessToken: String!
+  user: User!
 } 

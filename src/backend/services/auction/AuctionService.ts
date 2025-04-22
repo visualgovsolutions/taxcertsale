@@ -35,6 +35,24 @@ interface CertificateAuctionData {
 }
 
 /**
+ * Auction Data Type
+ */
+interface AuctionData {
+  id?: string;
+  name: string;
+  auction_date: Date;
+  start_time?: Date;
+  end_time?: Date;
+  status?: string;
+  description?: string;
+  location?: string;
+  registration_url?: string;
+  metadata?: Record<string, unknown>;
+  county_id: string;
+  county_name?: string;
+}
+
+/**
  * Auction Service Class
  */
 export class AuctionService {
@@ -384,18 +402,18 @@ export class AuctionService {
                b.id as bid_id, 
                b.user_id,
                b.interest_rate, 
-               b.timestamp,
+               b.bid_time,
                (SELECT COUNT(*) FROM bids WHERE certificate_id = c.id) as bid_count
         FROM certificates c
         LEFT JOIN bids b ON b.certificate_id = c.id AND b.status = $1
         WHERE c.status = $2
-        ORDER BY b.interest_rate ASC, b.timestamp ASC
+        ORDER BY b.interest_rate ASC, b.bid_time ASC
       `,
-        [BidStatus.WINNING, CertificateStatus.AUCTION_ACTIVE]
+        [BidStatus.WINNING, CertificateStatus.AVAILABLE]
       );
 
       // Group by certificate and take the lowest bid for each
-      const certificates = new Map<string, any>();
+      const certificates = new Map<string, Record<string, unknown>>();
 
       for (const row of result.rows) {
         if (!certificates.has(row.certificate_id)) {
@@ -407,10 +425,10 @@ export class AuctionService {
       for (const [certificateId, row] of certificates.entries()) {
         this.activeAuctions.set(certificateId, {
           certificateId,
-          lowestBid: row.bid_id ? parseFloat(row.interest_rate) : null,
-          lowestBidder: row.user_id || null,
-          bidCount: parseInt(row.bid_count, 10),
-          lastBidTime: row.timestamp ? new Date(row.timestamp) : null,
+          lowestBid: row.bid_id ? parseFloat(row.interest_rate as string) : null,
+          lowestBidder: row.user_id as string || null,
+          bidCount: parseInt(row.bid_count as string, 10),
+          lastBidTime: row.bid_time ? new Date(row.bid_time as string) : null,
         });
       }
 
@@ -534,20 +552,20 @@ export class AuctionService {
   }
 
   /**
-   * Clean up resources when stopping the service
+   * Shutdown the auction service
    */
   shutdown(): void {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
     }
-
+    
     console.log('Auction service shutdown');
   }
 
   /**
    * Get all auctions - for REST API
    */
-  async getAllAuctions() {
+  async getAllAuctions(): Promise<AuctionData[]> {
     try {
       const query = `
         SELECT a.*, c.name as county_name 
@@ -566,7 +584,7 @@ export class AuctionService {
   /**
    * Get upcoming auctions - for REST API
    */
-  async getUpcomingAuctions() {
+  async getUpcomingAuctions(): Promise<AuctionData[]> {
     try {
       const query = `
         SELECT a.*, c.name as county_name 
@@ -587,7 +605,7 @@ export class AuctionService {
   /**
    * Get auction by ID - for REST API
    */
-  async getAuctionById(id: string) {
+  async getAuctionById(id: string): Promise<AuctionData | null> {
     try {
       const query = `
         SELECT a.*, c.name as county_name 
@@ -606,7 +624,7 @@ export class AuctionService {
   /**
    * Create a new auction - for REST API
    */
-  async createAuction(auctionData: any) {
+  async createAuction(auctionData: Omit<AuctionData, 'id'>): Promise<AuctionData> {
     try {
       const {
         name,
@@ -655,7 +673,7 @@ export class AuctionService {
   /**
    * Update an auction - for REST API
    */
-  async updateAuction(id: string, auctionData: any) {
+  async updateAuction(id: string, auctionData: Partial<AuctionData>): Promise<AuctionData | null> {
     try {
       // First check if the auction exists
       const existingAuction = await this.getAuctionById(id);
@@ -664,8 +682,8 @@ export class AuctionService {
       }
 
       // Build the update query dynamically based on provided fields
-      const updateFields = [];
-      const values = [];
+      const updateFields: string[] = [];
+      const values: unknown[] = [];
       let paramIndex = 1;
 
       // Process each field that needs to be updated
@@ -703,7 +721,7 @@ export class AuctionService {
   /**
    * Delete an auction - for REST API
    */
-  async deleteAuction(id: string) {
+  async deleteAuction(id: string): Promise<{ id: string } | null> {
     try {
       // First check if the auction exists
       const existingAuction = await this.getAuctionById(id);
@@ -723,7 +741,7 @@ export class AuctionService {
   /**
    * Start an auction - for REST API
    */
-  async startAuction(id: string) {
+  async startAuction(id: string): Promise<AuctionData | null> {
     try {
       const auction = await this.getAuctionById(id);
       if (!auction) {
@@ -752,7 +770,7 @@ export class AuctionService {
   /**
    * End an auction - for REST API
    */
-  async endAuction(id: string) {
+  async endAuction(id: string): Promise<AuctionData | null> {
     try {
       const auction = await this.getAuctionById(id);
       if (!auction) {

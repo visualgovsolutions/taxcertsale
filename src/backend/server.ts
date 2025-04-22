@@ -1,18 +1,16 @@
 import 'reflect-metadata';
 import http from 'http';
 import config from '../config/index';
-import { createApolloServer, createApolloMiddleware } from './graphql';
 import { getPostgresPool, closePostgresPool } from '../database/postgresPool';
 import { AuctionService } from './services/auction/AuctionService';
 import { setupAuctionGateway } from './websockets/auction.gateway';
 import prisma from '../lib/prisma';
-import { app } from './app'; // Import the fully initialized app
+import { app, httpServer, apolloServer, initializeApollo } from './app';
 
 let auctionService: AuctionService | null = null;
 
 async function startServer() {
   const port = config.server.port;
-  const httpServer = http.createServer(app);
 
   // Initialize Auction WebSocket Gateway
   const auctionIo = setupAuctionGateway(httpServer);
@@ -24,8 +22,7 @@ async function startServer() {
   auctionService.initialize();
 
   // Initialize Apollo Server
-  const apolloServer = createApolloServer(httpServer);
-  await apolloServer.start();
+  await initializeApollo();
 
   // Basic graceful shutdown
   const shutdown = async (signal: string) => {
@@ -37,8 +34,12 @@ async function startServer() {
         auctionService = null;
         console.log('Auction service stopped.');
       }
-      await apolloServer.stop();
-      console.log('Apollo server stopped.');
+      if (apolloServer) {
+        await apolloServer.stop();
+        console.log('Apollo server stopped.');
+      } else {
+        console.log('Apollo server instance not available for shutdown.');
+      }
       await prisma.$disconnect();
       console.log('Prisma connection closed.');
       await closePostgresPool();
@@ -56,7 +57,7 @@ async function startServer() {
 
   await new Promise<void>(resolve => httpServer.listen({ port }, resolve));
   console.log(`🚀 Server ready at http://localhost:${port}`);
-  console.log(`🚀 GraphQL ready at http://localhost:${port}/graphql`);
+  console.log(`🚀 GraphQL should be ready at http://localhost:${port}/graphql`);
   console.log('🚀 WebSocket ready for bidding');
 }
 

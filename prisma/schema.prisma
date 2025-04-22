@@ -31,11 +31,18 @@ model User {
 }
 
 model County {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  state     String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  name                 String   @unique
+  state                String
+  countyCode           String?  @map("county_code")
+  websiteUrl           String?  @map("website_url")
+  taxCollectorUrl      String?  @map("tax_collector_url")
+  propertyAppraiserUrl String?  @map("property_appraiser_url")
+  description          String?
+  latitude             Float?
+  longitude            Float?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   properties Property[]
   auctions   Auction[]
@@ -113,6 +120,7 @@ model Bid {
   bidType       String   @map("bid_type") // e.g., 'interest_rate', 'premium'
   isWinningBid  Boolean  @default(false) @map("is_winning_bid")
   bidTime       DateTime @default(now()) @map("bid_time")
+  timestamp     DateTime @default(now()) // <-- Added for backend compatibility
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

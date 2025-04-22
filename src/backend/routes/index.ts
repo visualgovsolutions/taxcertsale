@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import healthRouter from './health';
 import complianceRouter from './compliance.routes';
 import auctionsRouter from './auctions.routes';
+import countiesRouter from './counties.routes';
 
 const router = Router();
 
@@ -13,6 +14,9 @@ router.use('/compliance', complianceRouter);
 
 // Auction routes
 router.use('/auctions', auctionsRouter);
+
+// County routes
+router.use('/counties', countiesRouter);
 
 // Root endpoint
 router.get('/', (_req: Request, res: Response) => {
