@@ -153,18 +153,17 @@ const resolvers = {
     // --- User Queries ---
     users: async (_: ResolverParent, _args: Record<string, never>, context: GraphQLContext) => {
         try {
-            // Only Admins can view all users
             checkAuth(context, [UserRoles.ADMIN]);
-            // Exclude password field from the result
             return await prisma.user.findMany({
                 select: { 
                     id: true, 
                     username: true, 
                     email: true, 
                     role: true, 
+                    status: true, // Included for admin list view
+                    kycStatus: true, // Included for admin list view
                     createdAt: true, 
                     updatedAt: true 
-                    // Omit password implicitly by not selecting it
                 }
             });
         } catch (error) {
@@ -175,7 +174,6 @@ const resolvers = {
     },
     user: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
         try {
-            // Only Admins can view specific user details (adjust if needed)
             checkAuth(context, [UserRoles.ADMIN]);
             const user = await prisma.user.findUnique({
                  where: { id },
@@ -184,6 +182,8 @@ const resolvers = {
                     username: true, 
                     email: true, 
                     role: true, 
+                    status: true, // Included for admin detail view
+                    kycStatus: true, // Included for admin detail view
                     createdAt: true, 
                     updatedAt: true 
                  }
@@ -393,29 +393,22 @@ const resolvers = {
     },
 
     // --- User Mutations ---
-    createUser: async (_: ResolverParent, { input }: { input: Prisma.UserCreateInput }, context: GraphQLContext) => {
+    createUser: async (_: ResolverParent, { input }: { input: any }, context: GraphQLContext) => {
         try {
-            // Only Admins can create users
             checkAuth(context, [UserRoles.ADMIN]);
-
-            // Hash the password before storing
             const hashedPassword = await hashPassword(input.password);
-
+            const userData = {
+                ...input,
+                password: hashedPassword,
+                role: input.role?.toUpperCase()
+                // status & kycStatus use Prisma defaults on creation
+            };
             const newUser = await prisma.user.create({
-                data: {
-                    ...input,
-                    password: hashedPassword, // Store the hashed password
-                    // Ensure role matches expected string values if Prisma enum isn't used
-                    role: input.role || UserRoles.USER // Default role if not provided
-                },
-                 select: { // Select fields to return, excluding password
-                    id: true, 
-                    username: true, 
-                    email: true, 
-                    role: true, 
-                    createdAt: true, 
-                    updatedAt: true 
-                 }
+                data: userData,
+                select: { // Return the newly created user, including new fields
+                    id: true, username: true, email: true, role: true, 
+                    status: true, kycStatus: true, createdAt: true, updatedAt: true
+                }
             });
             return newUser;
         } catch (error: any) {
@@ -428,27 +421,26 @@ const resolvers = {
             throw new GraphQLError(`Failed to create user: ${error.message || 'Unknown error'}`);
         }
     },
-    updateUser: async (_: ResolverParent, { id, input }: { id: string, input: Prisma.UserUpdateInput }, context: GraphQLContext) => {
+    updateUser: async (_: ResolverParent, { id, input }: { id: string; input: any }, context: GraphQLContext) => {
         try {
-            // Only Admins can update users
             checkAuth(context, [UserRoles.ADMIN]);
-
-            // Ensure password is not updated via this mutation
-            if (input.password) {
-                 throw new GraphQLError('Password updates are not allowed via this mutation.', { extensions: { code: 'BAD_REQUEST' } });
-            }
+            
+            // Build the data payload incrementally to handle optional fields.
+            const updateData: Record<string, any> = {};
+            if (input.username !== undefined) updateData.username = input.username;
+            if (input.email !== undefined) updateData.email = input.email;
+            if (input.role !== undefined) updateData.role = input.role?.toUpperCase();
+            // Include status fields if provided in the input
+            if (input.status !== undefined) updateData.status = input.status;
+            if (input.kycStatus !== undefined) updateData.kycStatus = input.kycStatus;
 
             const updatedUser = await prisma.user.update({
                 where: { id },
-                data: input,
-                select: { // Select fields to return, excluding password
-                    id: true, 
-                    username: true, 
-                    email: true, 
-                    role: true, 
-                    createdAt: true, 
-                    updatedAt: true 
-                 }
+                data: updateData,
+                select: { // Return the updated user, including new fields
+                    id: true, username: true, email: true, role: true, 
+                    status: true, kycStatus: true, createdAt: true, updatedAt: true
+                }
             });
             return updatedUser;
         } catch (error: any) {
@@ -466,19 +458,15 @@ const resolvers = {
     },
     deleteUser: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
         try {
-            // Only Admins can delete users
-            checkAuth(context, [UserRoles.ADMIN]);
-            // Consider checks for related entities (bids?) or implementing soft delete
-            const deletedUser = await prisma.user.delete({
-                where: { id },
-                select: { // Select fields to return, excluding password
-                    id: true, 
-                    username: true, 
-                    email: true, 
-                    role: true, 
+             checkAuth(context, [UserRoles.ADMIN]);
+             const deletedUser = await prisma.user.delete({
+                 where: { id },
+                 select: { // Return the deleted user data, including new fields
+                    id: true, username: true, email: true, role: true, 
+                    status: true, kycStatus: true, createdAt: true, updatedAt: true
                  }
-            });
-            return deletedUser;
+             });
+             return deletedUser;
         } catch (error: any) {
             console.error(`Error deleting user ${id}:`, error);
             if (error.code === 'P2025') { // Prisma record not found

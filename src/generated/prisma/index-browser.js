@@ -123,6 +123,8 @@ exports.Prisma.UserScalarFieldEnum = {
   password: 'password',
   email: 'email',
   role: 'role',
+  status: 'status',
+  kycStatus: 'kycStatus',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -131,6 +133,13 @@ exports.Prisma.CountyScalarFieldEnum = {
   id: 'id',
   name: 'name',
   state: 'state',
+  countyCode: 'countyCode',
+  websiteUrl: 'websiteUrl',
+  taxCollectorUrl: 'taxCollectorUrl',
+  propertyAppraiserUrl: 'propertyAppraiserUrl',
+  description: 'description',
+  latitude: 'latitude',
+  longitude: 'longitude',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -184,6 +193,7 @@ exports.Prisma.BidScalarFieldEnum = {
   bidType: 'bidType',
   isWinningBid: 'isWinningBid',
   bidTime: 'bidTime',
+  timestamp: 'timestamp',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

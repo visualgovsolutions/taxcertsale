@@ -21,7 +21,14 @@ model User {
   username  String   @unique
   password  String // Hashed password
   email     String   @unique
-  role      String   @default("user") // e.g., "user", "admin"
+  role      String   @default("user") // e.g., "user", "admin", "county_official", "investor"
+  
+  // User status (e.g., Active, Inactive for login control)
+  status    String?  @default("Pending KYC") // Default assumes KYC needed before activation
+  
+  // Know Your Customer status (tracking verification)
+  kycStatus String?  @default("Pending") // e.g., "Pending", "Verified", "Rejected"
+  
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

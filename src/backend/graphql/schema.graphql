@@ -53,31 +53,37 @@ enum UserRole {
   ADMIN
   COUNTY_OFFICIAL
   INVESTOR
-  USER # Added generic user based on Prisma default
+  USER
 }
 
 type User {
   id: ID!
   username: String!
   email: String!
-  role: UserRole! # Use the enum
-  createdAt: String! # Consider DateTime scalar
-  updatedAt: String! # Consider DateTime scalar
-  # DO NOT INCLUDE PASSWORD
+  role: UserRole!
+  # Current user status (e.g., "Active", "Inactive", "Pending KYC")
+  status: String 
+  # KYC verification status (e.g., "Pending", "Verified", "Rejected")
+  kycStatus: String 
+  createdAt: String!
+  updatedAt: String!
 }
 
 input CreateUserInput {
   username: String!
   email: String!
-  role: UserRole! # Use the enum
-  password: String! # Password needed for creation, but won't be queried
+  role: UserRole!
+  password: String!
 }
 
 input UpdateUserInput {
   username: String
   email: String
-  role: UserRole # Use the enum
-  # Password updates should likely be a separate, dedicated mutation
+  role: UserRole
+  # Allow updating user status via admin interface
+  status: String 
+  # Allow updating KYC status via admin interface
+  kycStatus: String 
 }
 
 type Mutation {
@@ -89,7 +95,7 @@ type Mutation {
   deleteCounty(id: ID!): County
   createUser(input: CreateUserInput!): User!
   updateUser(id: ID!, input: UpdateUserInput!): User
-  deleteUser(id: ID!): User # Consider soft delete/status change later
+  deleteUser(id: ID!): User
   login(email: String!, password: String!): AuthPayload!
 }
 

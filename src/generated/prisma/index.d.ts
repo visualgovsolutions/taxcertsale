@@ -1521,6 +1521,8 @@ export namespace Prisma {
     password: string | null
     email: string | null
     role: string | null
+    status: string | null
+    kycStatus: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1531,6 +1533,8 @@ export namespace Prisma {
     password: string | null
     email: string | null
     role: string | null
+    status: string | null
+    kycStatus: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1541,6 +1545,8 @@ export namespace Prisma {
     password: number
     email: number
     role: number
+    status: number
+    kycStatus: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -1553,6 +1559,8 @@ export namespace Prisma {
     password?: true
     email?: true
     role?: true
+    status?: true
+    kycStatus?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1563,6 +1571,8 @@ export namespace Prisma {
     password?: true
     email?: true
     role?: true
+    status?: true
+    kycStatus?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1573,6 +1583,8 @@ export namespace Prisma {
     password?: true
     email?: true
     role?: true
+    status?: true
+    kycStatus?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -1656,6 +1668,8 @@ export namespace Prisma {
     password: string
     email: string
     role: string
+    status: string | null
+    kycStatus: string | null
     createdAt: Date
     updatedAt: Date
     _count: UserCountAggregateOutputType | null
@@ -1683,6 +1697,8 @@ export namespace Prisma {
     password?: boolean
     email?: boolean
     role?: boolean
+    status?: boolean
+    kycStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     bids?: boolean | User$bidsArgs<ExtArgs>
@@ -1695,6 +1711,8 @@ export namespace Prisma {
     password?: boolean
     email?: boolean
     role?: boolean
+    status?: boolean
+    kycStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -1705,6 +1723,8 @@ export namespace Prisma {
     password?: boolean
     email?: boolean
     role?: boolean
+    status?: boolean
+    kycStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["user"]>
@@ -1715,11 +1735,13 @@ export namespace Prisma {
     password?: boolean
     email?: boolean
     role?: boolean
+    status?: boolean
+    kycStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "password" | "email" | "role" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "username" | "password" | "email" | "role" | "status" | "kycStatus" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     bids?: boolean | User$bidsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1738,6 +1760,8 @@ export namespace Prisma {
       password: string
       email: string
       role: string
+      status: string | null
+      kycStatus: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["user"]>
@@ -2169,6 +2193,8 @@ export namespace Prisma {
     readonly password: FieldRef<"User", 'String'>
     readonly email: FieldRef<"User", 'String'>
     readonly role: FieldRef<"User", 'String'>
+    readonly status: FieldRef<"User", 'String'>
+    readonly kycStatus: FieldRef<"User", 'String'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
   }
@@ -2607,14 +2633,33 @@ export namespace Prisma {
 
   export type AggregateCounty = {
     _count: CountyCountAggregateOutputType | null
+    _avg: CountyAvgAggregateOutputType | null
+    _sum: CountySumAggregateOutputType | null
     _min: CountyMinAggregateOutputType | null
     _max: CountyMaxAggregateOutputType | null
+  }
+
+  export type CountyAvgAggregateOutputType = {
+    latitude: number | null
+    longitude: number | null
+  }
+
+  export type CountySumAggregateOutputType = {
+    latitude: number | null
+    longitude: number | null
   }
 
   export type CountyMinAggregateOutputType = {
     id: string | null
     name: string | null
     state: string | null
+    countyCode: string | null
+    websiteUrl: string | null
+    taxCollectorUrl: string | null
+    propertyAppraiserUrl: string | null
+    description: string | null
+    latitude: number | null
+    longitude: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2623,6 +2668,13 @@ export namespace Prisma {
     id: string | null
     name: string | null
     state: string | null
+    countyCode: string | null
+    websiteUrl: string | null
+    taxCollectorUrl: string | null
+    propertyAppraiserUrl: string | null
+    description: string | null
+    latitude: number | null
+    longitude: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2631,16 +2683,40 @@ export namespace Prisma {
     id: number
     name: number
     state: number
+    countyCode: number
+    websiteUrl: number
+    taxCollectorUrl: number
+    propertyAppraiserUrl: number
+    description: number
+    latitude: number
+    longitude: number
     createdAt: number
     updatedAt: number
     _all: number
   }
 
 
+  export type CountyAvgAggregateInputType = {
+    latitude?: true
+    longitude?: true
+  }
+
+  export type CountySumAggregateInputType = {
+    latitude?: true
+    longitude?: true
+  }
+
   export type CountyMinAggregateInputType = {
     id?: true
     name?: true
     state?: true
+    countyCode?: true
+    websiteUrl?: true
+    taxCollectorUrl?: true
+    propertyAppraiserUrl?: true
+    description?: true
+    latitude?: true
+    longitude?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2649,6 +2725,13 @@ export namespace Prisma {
     id?: true
     name?: true
     state?: true
+    countyCode?: true
+    websiteUrl?: true
+    taxCollectorUrl?: true
+    propertyAppraiserUrl?: true
+    description?: true
+    latitude?: true
+    longitude?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2657,6 +2740,13 @@ export namespace Prisma {
     id?: true
     name?: true
     state?: true
+    countyCode?: true
+    websiteUrl?: true
+    taxCollectorUrl?: true
+    propertyAppraiserUrl?: true
+    description?: true
+    latitude?: true
+    longitude?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -2700,6 +2790,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: CountyAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CountySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: CountyMinAggregateInputType
@@ -2730,6 +2832,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: CountyCountAggregateInputType | true
+    _avg?: CountyAvgAggregateInputType
+    _sum?: CountySumAggregateInputType
     _min?: CountyMinAggregateInputType
     _max?: CountyMaxAggregateInputType
   }
@@ -2738,9 +2842,18 @@ export namespace Prisma {
     id: string
     name: string
     state: string
+    countyCode: string | null
+    websiteUrl: string | null
+    taxCollectorUrl: string | null
+    propertyAppraiserUrl: string | null
+    description: string | null
+    latitude: number | null
+    longitude: number | null
     createdAt: Date
     updatedAt: Date
     _count: CountyCountAggregateOutputType | null
+    _avg: CountyAvgAggregateOutputType | null
+    _sum: CountySumAggregateOutputType | null
     _min: CountyMinAggregateOutputType | null
     _max: CountyMaxAggregateOutputType | null
   }
@@ -2763,6 +2876,13 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     state?: boolean
+    countyCode?: boolean
+    websiteUrl?: boolean
+    taxCollectorUrl?: boolean
+    propertyAppraiserUrl?: boolean
+    description?: boolean
+    latitude?: boolean
+    longitude?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     properties?: boolean | County$propertiesArgs<ExtArgs>
@@ -2775,6 +2895,13 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     state?: boolean
+    countyCode?: boolean
+    websiteUrl?: boolean
+    taxCollectorUrl?: boolean
+    propertyAppraiserUrl?: boolean
+    description?: boolean
+    latitude?: boolean
+    longitude?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["county"]>
@@ -2783,6 +2910,13 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     state?: boolean
+    countyCode?: boolean
+    websiteUrl?: boolean
+    taxCollectorUrl?: boolean
+    propertyAppraiserUrl?: boolean
+    description?: boolean
+    latitude?: boolean
+    longitude?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["county"]>
@@ -2791,11 +2925,18 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     state?: boolean
+    countyCode?: boolean
+    websiteUrl?: boolean
+    taxCollectorUrl?: boolean
+    propertyAppraiserUrl?: boolean
+    description?: boolean
+    latitude?: boolean
+    longitude?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type CountyOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "state" | "createdAt" | "updatedAt", ExtArgs["result"]["county"]>
+  export type CountyOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "state" | "countyCode" | "websiteUrl" | "taxCollectorUrl" | "propertyAppraiserUrl" | "description" | "latitude" | "longitude" | "createdAt" | "updatedAt", ExtArgs["result"]["county"]>
   export type CountyInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     properties?: boolean | County$propertiesArgs<ExtArgs>
     auctions?: boolean | County$auctionsArgs<ExtArgs>
@@ -2816,6 +2957,13 @@ export namespace Prisma {
       id: string
       name: string
       state: string
+      countyCode: string | null
+      websiteUrl: string | null
+      taxCollectorUrl: string | null
+      propertyAppraiserUrl: string | null
+      description: string | null
+      latitude: number | null
+      longitude: number | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["county"]>
@@ -3247,6 +3395,13 @@ export namespace Prisma {
     readonly id: FieldRef<"County", 'String'>
     readonly name: FieldRef<"County", 'String'>
     readonly state: FieldRef<"County", 'String'>
+    readonly countyCode: FieldRef<"County", 'String'>
+    readonly websiteUrl: FieldRef<"County", 'String'>
+    readonly taxCollectorUrl: FieldRef<"County", 'String'>
+    readonly propertyAppraiserUrl: FieldRef<"County", 'String'>
+    readonly description: FieldRef<"County", 'String'>
+    readonly latitude: FieldRef<"County", 'Float'>
+    readonly longitude: FieldRef<"County", 'Float'>
     readonly createdAt: FieldRef<"County", 'DateTime'>
     readonly updatedAt: FieldRef<"County", 'DateTime'>
   }
@@ -7314,6 +7469,7 @@ export namespace Prisma {
     bidType: string | null
     isWinningBid: boolean | null
     bidTime: Date | null
+    timestamp: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -7327,6 +7483,7 @@ export namespace Prisma {
     bidType: string | null
     isWinningBid: boolean | null
     bidTime: Date | null
+    timestamp: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -7340,6 +7497,7 @@ export namespace Prisma {
     bidType: number
     isWinningBid: number
     bidTime: number
+    timestamp: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -7363,6 +7521,7 @@ export namespace Prisma {
     bidType?: true
     isWinningBid?: true
     bidTime?: true
+    timestamp?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -7376,6 +7535,7 @@ export namespace Prisma {
     bidType?: true
     isWinningBid?: true
     bidTime?: true
+    timestamp?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -7389,6 +7549,7 @@ export namespace Prisma {
     bidType?: true
     isWinningBid?: true
     bidTime?: true
+    timestamp?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -7489,6 +7650,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid: boolean
     bidTime: Date
+    timestamp: Date
     createdAt: Date
     updatedAt: Date
     _count: BidCountAggregateOutputType | null
@@ -7521,6 +7683,7 @@ export namespace Prisma {
     bidType?: boolean
     isWinningBid?: boolean
     bidTime?: boolean
+    timestamp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     auction?: boolean | AuctionDefaultArgs<ExtArgs>
@@ -7537,6 +7700,7 @@ export namespace Prisma {
     bidType?: boolean
     isWinningBid?: boolean
     bidTime?: boolean
+    timestamp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     auction?: boolean | AuctionDefaultArgs<ExtArgs>
@@ -7553,6 +7717,7 @@ export namespace Prisma {
     bidType?: boolean
     isWinningBid?: boolean
     bidTime?: boolean
+    timestamp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     auction?: boolean | AuctionDefaultArgs<ExtArgs>
@@ -7569,11 +7734,12 @@ export namespace Prisma {
     bidType?: boolean
     isWinningBid?: boolean
     bidTime?: boolean
+    timestamp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type BidOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "auctionId" | "certificateId" | "userId" | "bidAmount" | "bidType" | "isWinningBid" | "bidTime" | "createdAt" | "updatedAt", ExtArgs["result"]["bid"]>
+  export type BidOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "auctionId" | "certificateId" | "userId" | "bidAmount" | "bidType" | "isWinningBid" | "bidTime" | "timestamp" | "createdAt" | "updatedAt", ExtArgs["result"]["bid"]>
   export type BidInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auction?: boolean | AuctionDefaultArgs<ExtArgs>
     certificate?: boolean | CertificateDefaultArgs<ExtArgs>
@@ -7606,6 +7772,7 @@ export namespace Prisma {
       bidType: string
       isWinningBid: boolean
       bidTime: Date
+      timestamp: Date
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["bid"]>
@@ -8042,6 +8209,7 @@ export namespace Prisma {
     readonly bidType: FieldRef<"Bid", 'String'>
     readonly isWinningBid: FieldRef<"Bid", 'Boolean'>
     readonly bidTime: FieldRef<"Bid", 'DateTime'>
+    readonly timestamp: FieldRef<"Bid", 'DateTime'>
     readonly createdAt: FieldRef<"Bid", 'DateTime'>
     readonly updatedAt: FieldRef<"Bid", 'DateTime'>
   }
@@ -8478,6 +8646,8 @@ export namespace Prisma {
     password: 'password',
     email: 'email',
     role: 'role',
+    status: 'status',
+    kycStatus: 'kycStatus',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -8489,6 +8659,13 @@ export namespace Prisma {
     id: 'id',
     name: 'name',
     state: 'state',
+    countyCode: 'countyCode',
+    websiteUrl: 'websiteUrl',
+    taxCollectorUrl: 'taxCollectorUrl',
+    propertyAppraiserUrl: 'propertyAppraiserUrl',
+    description: 'description',
+    latitude: 'latitude',
+    longitude: 'longitude',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -8554,6 +8731,7 @@ export namespace Prisma {
     bidType: 'bidType',
     isWinningBid: 'isWinningBid',
     bidTime: 'bidTime',
+    timestamp: 'timestamp',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -8665,6 +8843,8 @@ export namespace Prisma {
     password?: StringFilter<"User"> | string
     email?: StringFilter<"User"> | string
     role?: StringFilter<"User"> | string
+    status?: StringNullableFilter<"User"> | string | null
+    kycStatus?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     bids?: BidListRelationFilter
@@ -8676,6 +8856,8 @@ export namespace Prisma {
     password?: SortOrder
     email?: SortOrder
     role?: SortOrder
+    status?: SortOrderInput | SortOrder
+    kycStatus?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     bids?: BidOrderByRelationAggregateInput
@@ -8690,6 +8872,8 @@ export namespace Prisma {
     NOT?: UserWhereInput | UserWhereInput[]
     password?: StringFilter<"User"> | string
     role?: StringFilter<"User"> | string
+    status?: StringNullableFilter<"User"> | string | null
+    kycStatus?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     bids?: BidListRelationFilter
@@ -8701,6 +8885,8 @@ export namespace Prisma {
     password?: SortOrder
     email?: SortOrder
     role?: SortOrder
+    status?: SortOrderInput | SortOrder
+    kycStatus?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
@@ -8717,6 +8903,8 @@ export namespace Prisma {
     password?: StringWithAggregatesFilter<"User"> | string
     email?: StringWithAggregatesFilter<"User"> | string
     role?: StringWithAggregatesFilter<"User"> | string
+    status?: StringNullableWithAggregatesFilter<"User"> | string | null
+    kycStatus?: StringNullableWithAggregatesFilter<"User"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
@@ -8728,6 +8916,13 @@ export namespace Prisma {
     id?: StringFilter<"County"> | string
     name?: StringFilter<"County"> | string
     state?: StringFilter<"County"> | string
+    countyCode?: StringNullableFilter<"County"> | string | null
+    websiteUrl?: StringNullableFilter<"County"> | string | null
+    taxCollectorUrl?: StringNullableFilter<"County"> | string | null
+    propertyAppraiserUrl?: StringNullableFilter<"County"> | string | null
+    description?: StringNullableFilter<"County"> | string | null
+    latitude?: FloatNullableFilter<"County"> | number | null
+    longitude?: FloatNullableFilter<"County"> | number | null
     createdAt?: DateTimeFilter<"County"> | Date | string
     updatedAt?: DateTimeFilter<"County"> | Date | string
     properties?: PropertyListRelationFilter
@@ -8739,6 +8934,13 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     state?: SortOrder
+    countyCode?: SortOrderInput | SortOrder
+    websiteUrl?: SortOrderInput | SortOrder
+    taxCollectorUrl?: SortOrderInput | SortOrder
+    propertyAppraiserUrl?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    latitude?: SortOrderInput | SortOrder
+    longitude?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     properties?: PropertyOrderByRelationAggregateInput
@@ -8753,6 +8955,13 @@ export namespace Prisma {
     OR?: CountyWhereInput[]
     NOT?: CountyWhereInput | CountyWhereInput[]
     state?: StringFilter<"County"> | string
+    countyCode?: StringNullableFilter<"County"> | string | null
+    websiteUrl?: StringNullableFilter<"County"> | string | null
+    taxCollectorUrl?: StringNullableFilter<"County"> | string | null
+    propertyAppraiserUrl?: StringNullableFilter<"County"> | string | null
+    description?: StringNullableFilter<"County"> | string | null
+    latitude?: FloatNullableFilter<"County"> | number | null
+    longitude?: FloatNullableFilter<"County"> | number | null
     createdAt?: DateTimeFilter<"County"> | Date | string
     updatedAt?: DateTimeFilter<"County"> | Date | string
     properties?: PropertyListRelationFilter
@@ -8764,11 +8973,20 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     state?: SortOrder
+    countyCode?: SortOrderInput | SortOrder
+    websiteUrl?: SortOrderInput | SortOrder
+    taxCollectorUrl?: SortOrderInput | SortOrder
+    propertyAppraiserUrl?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    latitude?: SortOrderInput | SortOrder
+    longitude?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: CountyCountOrderByAggregateInput
+    _avg?: CountyAvgOrderByAggregateInput
     _max?: CountyMaxOrderByAggregateInput
     _min?: CountyMinOrderByAggregateInput
+    _sum?: CountySumOrderByAggregateInput
   }
 
   export type CountyScalarWhereWithAggregatesInput = {
@@ -8778,6 +8996,13 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"County"> | string
     name?: StringWithAggregatesFilter<"County"> | string
     state?: StringWithAggregatesFilter<"County"> | string
+    countyCode?: StringNullableWithAggregatesFilter<"County"> | string | null
+    websiteUrl?: StringNullableWithAggregatesFilter<"County"> | string | null
+    taxCollectorUrl?: StringNullableWithAggregatesFilter<"County"> | string | null
+    propertyAppraiserUrl?: StringNullableWithAggregatesFilter<"County"> | string | null
+    description?: StringNullableWithAggregatesFilter<"County"> | string | null
+    latitude?: FloatNullableWithAggregatesFilter<"County"> | number | null
+    longitude?: FloatNullableWithAggregatesFilter<"County"> | number | null
     createdAt?: DateTimeWithAggregatesFilter<"County"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"County"> | Date | string
   }
@@ -9059,6 +9284,7 @@ export namespace Prisma {
     bidType?: StringFilter<"Bid"> | string
     isWinningBid?: BoolFilter<"Bid"> | boolean
     bidTime?: DateTimeFilter<"Bid"> | Date | string
+    timestamp?: DateTimeFilter<"Bid"> | Date | string
     createdAt?: DateTimeFilter<"Bid"> | Date | string
     updatedAt?: DateTimeFilter<"Bid"> | Date | string
     auction?: XOR<AuctionScalarRelationFilter, AuctionWhereInput>
@@ -9075,6 +9301,7 @@ export namespace Prisma {
     bidType?: SortOrder
     isWinningBid?: SortOrder
     bidTime?: SortOrder
+    timestamp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     auction?: AuctionOrderByWithRelationInput
@@ -9094,6 +9321,7 @@ export namespace Prisma {
     bidType?: StringFilter<"Bid"> | string
     isWinningBid?: BoolFilter<"Bid"> | boolean
     bidTime?: DateTimeFilter<"Bid"> | Date | string
+    timestamp?: DateTimeFilter<"Bid"> | Date | string
     createdAt?: DateTimeFilter<"Bid"> | Date | string
     updatedAt?: DateTimeFilter<"Bid"> | Date | string
     auction?: XOR<AuctionScalarRelationFilter, AuctionWhereInput>
@@ -9110,6 +9338,7 @@ export namespace Prisma {
     bidType?: SortOrder
     isWinningBid?: SortOrder
     bidTime?: SortOrder
+    timestamp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: BidCountOrderByAggregateInput
@@ -9131,6 +9360,7 @@ export namespace Prisma {
     bidType?: StringWithAggregatesFilter<"Bid"> | string
     isWinningBid?: BoolWithAggregatesFilter<"Bid"> | boolean
     bidTime?: DateTimeWithAggregatesFilter<"Bid"> | Date | string
+    timestamp?: DateTimeWithAggregatesFilter<"Bid"> | Date | string
     createdAt?: DateTimeWithAggregatesFilter<"Bid"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Bid"> | Date | string
   }
@@ -9141,6 +9371,8 @@ export namespace Prisma {
     password: string
     email: string
     role?: string
+    status?: string | null
+    kycStatus?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     bids?: BidCreateNestedManyWithoutUserInput
@@ -9152,6 +9384,8 @@ export namespace Prisma {
     password: string
     email: string
     role?: string
+    status?: string | null
+    kycStatus?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     bids?: BidUncheckedCreateNestedManyWithoutUserInput
@@ -9163,6 +9397,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     bids?: BidUpdateManyWithoutUserNestedInput
@@ -9174,6 +9410,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     bids?: BidUncheckedUpdateManyWithoutUserNestedInput
@@ -9185,6 +9423,8 @@ export namespace Prisma {
     password: string
     email: string
     role?: string
+    status?: string | null
+    kycStatus?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9195,6 +9435,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9205,6 +9447,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9213,6 +9457,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyCreateNestedManyWithoutCountyInput
@@ -9224,6 +9475,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyUncheckedCreateNestedManyWithoutCountyInput
@@ -9235,6 +9493,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUpdateManyWithoutCountyNestedInput
@@ -9246,6 +9511,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUncheckedUpdateManyWithoutCountyNestedInput
@@ -9257,6 +9529,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9265,6 +9544,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9273,6 +9559,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9574,6 +9867,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
     auction: AuctionCreateNestedOneWithoutBidsInput
@@ -9590,6 +9884,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9600,6 +9895,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     auction?: AuctionUpdateOneRequiredWithoutBidsNestedInput
@@ -9616,6 +9912,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9629,6 +9926,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9639,6 +9937,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9652,6 +9951,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9671,6 +9971,21 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type StringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -9688,6 +10003,11 @@ export namespace Prisma {
     none?: BidWhereInput
   }
 
+  export type SortOrderInput = {
+    sort: SortOrder
+    nulls?: NullsOrder
+  }
+
   export type BidOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -9698,6 +10018,8 @@ export namespace Prisma {
     password?: SortOrder
     email?: SortOrder
     role?: SortOrder
+    status?: SortOrder
+    kycStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -9708,6 +10030,8 @@ export namespace Prisma {
     password?: SortOrder
     email?: SortOrder
     role?: SortOrder
+    status?: SortOrder
+    kycStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -9718,6 +10042,8 @@ export namespace Prisma {
     password?: SortOrder
     email?: SortOrder
     role?: SortOrder
+    status?: SortOrder
+    kycStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -9740,6 +10066,24 @@ export namespace Prisma {
     _max?: NestedStringFilter<$PrismaModel>
   }
 
+  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
+  }
+
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -9752,6 +10096,17 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type PropertyListRelationFilter = {
@@ -9788,14 +10143,33 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     state?: SortOrder
+    countyCode?: SortOrder
+    websiteUrl?: SortOrder
+    taxCollectorUrl?: SortOrder
+    propertyAppraiserUrl?: SortOrder
+    description?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type CountyAvgOrderByAggregateInput = {
+    latitude?: SortOrder
+    longitude?: SortOrder
   }
 
   export type CountyMaxOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
     state?: SortOrder
+    countyCode?: SortOrder
+    websiteUrl?: SortOrder
+    taxCollectorUrl?: SortOrder
+    propertyAppraiserUrl?: SortOrder
+    description?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -9804,33 +10178,41 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     state?: SortOrder
+    countyCode?: SortOrder
+    websiteUrl?: SortOrder
+    taxCollectorUrl?: SortOrder
+    propertyAppraiserUrl?: SortOrder
+    description?: SortOrder
+    latitude?: SortOrder
+    longitude?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
-  export type StringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  export type CountySumOrderByAggregateInput = {
+    latitude?: SortOrder
+    longitude?: SortOrder
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type CountyScalarRelationFilter = {
     is?: CountyWhereInput
     isNot?: CountyWhereInput
-  }
-
-  export type SortOrderInput = {
-    sort: SortOrder
-    nulls?: NullsOrder
   }
 
   export type PropertyCountOrderByAggregateInput = {
@@ -9872,24 +10254,6 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
-  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
-  }
-
   export type AuctionCountOrderByAggregateInput = {
     id?: SortOrder
     countyId?: SortOrder
@@ -9929,17 +10293,6 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
-  export type FloatNullableFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type DateTimeNullableFilter<$PrismaModel = never> = {
@@ -10042,22 +10395,6 @@ export namespace Prisma {
     _max?: NestedFloatFilter<$PrismaModel>
   }
 
-  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedFloatNullableFilter<$PrismaModel>
-    _min?: NestedFloatNullableFilter<$PrismaModel>
-    _max?: NestedFloatNullableFilter<$PrismaModel>
-  }
-
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
@@ -10096,6 +10433,7 @@ export namespace Prisma {
     bidType?: SortOrder
     isWinningBid?: SortOrder
     bidTime?: SortOrder
+    timestamp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -10113,6 +10451,7 @@ export namespace Prisma {
     bidType?: SortOrder
     isWinningBid?: SortOrder
     bidTime?: SortOrder
+    timestamp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -10126,6 +10465,7 @@ export namespace Prisma {
     bidType?: SortOrder
     isWinningBid?: SortOrder
     bidTime?: SortOrder
+    timestamp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -10158,6 +10498,10 @@ export namespace Prisma {
 
   export type StringFieldUpdateOperationsInput = {
     set?: string
+  }
+
+  export type NullableStringFieldUpdateOperationsInput = {
+    set?: string | null
   }
 
   export type DateTimeFieldUpdateOperationsInput = {
@@ -10232,6 +10576,14 @@ export namespace Prisma {
     connectOrCreate?: CertificateCreateOrConnectWithoutCountyInput | CertificateCreateOrConnectWithoutCountyInput[]
     createMany?: CertificateCreateManyCountyInputEnvelope
     connect?: CertificateWhereUniqueInput | CertificateWhereUniqueInput[]
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
   }
 
   export type PropertyUpdateManyWithoutCountyNestedInput = {
@@ -10336,10 +10688,6 @@ export namespace Prisma {
     connectOrCreate?: CertificateCreateOrConnectWithoutPropertyInput | CertificateCreateOrConnectWithoutPropertyInput[]
     createMany?: CertificateCreateManyPropertyInputEnvelope
     connect?: CertificateWhereUniqueInput | CertificateWhereUniqueInput[]
-  }
-
-  export type NullableStringFieldUpdateOperationsInput = {
-    set?: string | null
   }
 
   export type CountyUpdateOneRequiredWithoutPropertiesNestedInput = {
@@ -10516,14 +10864,6 @@ export namespace Prisma {
     divide?: number
   }
 
-  export type NullableFloatFieldUpdateOperationsInput = {
-    set?: number | null
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
   export type NullableDateTimeFieldUpdateOperationsInput = {
     set?: Date | string | null
   }
@@ -10640,6 +10980,20 @@ export namespace Prisma {
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
+  export type NestedStringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  }
+
   export type NestedDateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -10679,34 +11033,6 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
-  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedDateTimeFilter<$PrismaModel>
-    _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
-  export type NestedStringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
-  }
-
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
     in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
@@ -10735,15 +11061,18 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
-  export type NestedFloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
+  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
   export type NestedFloatNullableFilter<$PrismaModel = never> = {
@@ -10755,6 +11084,33 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
@@ -10782,22 +11138,6 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
-  }
-
-  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedFloatNullableFilter<$PrismaModel>
-    _min?: NestedFloatNullableFilter<$PrismaModel>
-    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -10833,6 +11173,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
     auction: AuctionCreateNestedOneWithoutBidsInput
@@ -10847,6 +11188,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -10889,6 +11231,7 @@ export namespace Prisma {
     bidType?: StringFilter<"Bid"> | string
     isWinningBid?: BoolFilter<"Bid"> | boolean
     bidTime?: DateTimeFilter<"Bid"> | Date | string
+    timestamp?: DateTimeFilter<"Bid"> | Date | string
     createdAt?: DateTimeFilter<"Bid"> | Date | string
     updatedAt?: DateTimeFilter<"Bid"> | Date | string
   }
@@ -11106,6 +11449,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     auctions?: AuctionCreateNestedManyWithoutCountyInput
@@ -11116,6 +11466,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     auctions?: AuctionUncheckedCreateNestedManyWithoutCountyInput
@@ -11186,6 +11543,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     auctions?: AuctionUpdateManyWithoutCountyNestedInput
@@ -11196,6 +11560,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     auctions?: AuctionUncheckedUpdateManyWithoutCountyNestedInput
@@ -11222,6 +11593,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyCreateNestedManyWithoutCountyInput
@@ -11232,6 +11610,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyUncheckedCreateNestedManyWithoutCountyInput
@@ -11293,6 +11678,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
     certificate: CertificateCreateNestedOneWithoutBidsInput
@@ -11307,6 +11693,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11336,6 +11723,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUpdateManyWithoutCountyNestedInput
@@ -11346,6 +11740,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUncheckedUpdateManyWithoutCountyNestedInput
@@ -11388,6 +11789,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyCreateNestedManyWithoutCountyInput
@@ -11398,6 +11806,13 @@ export namespace Prisma {
     id?: string
     name: string
     state: string
+    countyCode?: string | null
+    websiteUrl?: string | null
+    taxCollectorUrl?: string | null
+    propertyAppraiserUrl?: string | null
+    description?: string | null
+    latitude?: number | null
+    longitude?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     properties?: PropertyUncheckedCreateNestedManyWithoutCountyInput
@@ -11473,6 +11888,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
     auction: AuctionCreateNestedOneWithoutBidsInput
@@ -11487,6 +11903,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11516,6 +11933,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUpdateManyWithoutCountyNestedInput
@@ -11526,6 +11950,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     state?: StringFieldUpdateOperationsInput | string
+    countyCode?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    taxCollectorUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    propertyAppraiserUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    latitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    longitude?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     properties?: PropertyUncheckedUpdateManyWithoutCountyNestedInput
@@ -11690,6 +12121,8 @@ export namespace Prisma {
     password: string
     email: string
     role?: string
+    status?: string | null
+    kycStatus?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11700,6 +12133,8 @@ export namespace Prisma {
     password: string
     email: string
     role?: string
+    status?: string | null
+    kycStatus?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11804,6 +12239,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11814,6 +12251,8 @@ export namespace Prisma {
     password?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
     role?: StringFieldUpdateOperationsInput | string
+    status?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11826,6 +12265,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11836,6 +12276,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     auction?: AuctionUpdateOneRequiredWithoutBidsNestedInput
@@ -11850,6 +12291,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11862,6 +12304,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12112,6 +12555,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -12172,6 +12616,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     certificate?: CertificateUpdateOneRequiredWithoutBidsNestedInput
@@ -12186,6 +12631,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12198,6 +12644,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12210,6 +12657,7 @@ export namespace Prisma {
     bidType: string
     isWinningBid?: boolean
     bidTime?: Date | string
+    timestamp?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -12220,6 +12668,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     auction?: AuctionUpdateOneRequiredWithoutBidsNestedInput
@@ -12234,6 +12683,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12246,6 +12696,7 @@ export namespace Prisma {
     bidType?: StringFieldUpdateOperationsInput | string
     isWinningBid?: BoolFieldUpdateOperationsInput | boolean
     bidTime?: DateTimeFieldUpdateOperationsInput | Date | string
+    timestamp?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
