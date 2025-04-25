@@ -1,4 +1,4 @@
-import { Request, Response /*, NextFunction */ } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import AppError from '../utils/AppError';
 import config from '../../config/index';
 
@@ -50,7 +50,7 @@ const sendErrorProd = (err: AppError | Error, res: Response) => {
 };
 
 // Global error handling middleware
-const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response /*, next: NextFunction*/) => {
+const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response, next: NextFunction) => {
   // Set default status code and status if not already set (e.g., by AppError)
   if (err instanceof AppError) {
       err.statusCode = err.statusCode || 500;
@@ -62,11 +62,22 @@ const globalErrorHandler = (err: AppError | Error, _req: Request, res: Response 
       // For generic errors in prod, don't leak details
       if (config.server.nodeEnv === 'production') {
         console.error('ERROR 💥 (Production - Generic):', err);
-        return res.status(statusCode).json({
-          status: 'error',
-          message: 'Something went wrong. Please try again later.',
-        });
+        // Check if headers are already sent before sending response
+        if (!res.headersSent) {
+           res.status(statusCode).json({
+             status: 'error',
+             message: 'Something went wrong. Please try again later.',
+           });
+        }
+        return; // Explicit return after handling
       }
+  }
+
+  // Check if headers sent before attempting to send another response
+  if (res.headersSent) {
+     console.error('Error handler called after headers were sent:', err);
+     // If headers are sent, we can't send a new response. Delegate to default handler.
+     return next(err); 
   }
 
   if (config.server.nodeEnv === 'development') {

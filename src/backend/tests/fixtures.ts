@@ -7,8 +7,8 @@
 // Sample user data
 export const testUsers = {
   admin: {
-    email: 'admin@example.com',
-    password: 'adminPassword123',
+    email: 'admin@visualgov.com',
+    password: 'AdminPass1!',
     role: 'admin',
     firstName: 'Admin',
     lastName: 'User',

@@ -55,6 +55,26 @@ async function startServer() {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
+  // Add error handling for the listen call
+  httpServer.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.syscall !== 'listen') {
+      throw error;
+    }
+    // Handle specific listen errors with friendly messages
+    switch (error.code) {
+      case 'EACCES':
+        console.error(`Port ${port} requires elevated privileges`);
+        process.exit(1);
+        break;
+      case 'EADDRINUSE':
+        console.error(`🔴🔴🔴 Port ${port} is already in use. Kill the process using it and retry.`);
+        process.exit(1);
+        break;
+      default:
+        throw error;
+    }
+  });
+
   await new Promise<void>(resolve => httpServer.listen({ port }, resolve));
   console.log(`🚀 Server ready at http://localhost:${port}`);
   console.log(`🚀 GraphQL should be ready at http://localhost:${port}/graphql`);
