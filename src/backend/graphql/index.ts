@@ -11,18 +11,18 @@ import resolvers from './resolvers';
 import config from '../../config/index';
 import { Request, Response } from 'express'; // Import Request and Response for context
 import { verifyAccessToken } from '../utils/jwtUtils';
-import { UserRole } from '../../models/entities/user.entity';
 
 // Define our GraphQL context type
 export interface GraphQLContext {
   user?: {
     userId: string;
     email: string;
-    role: UserRole;
+    role: string; // Changed to string type to avoid import error
     firstName?: string;
     lastName?: string;
   };
   isAuthenticated: boolean;
+  req?: Request;  // Make req optional to fix typescript errors
 }
 
 // Define context type (can be expanded later)
@@ -81,7 +81,11 @@ const createApolloMiddleware = (server: ApolloServer<GraphQLContext>) => {
       
       // Default context with no authentication
       const context: GraphQLContext = {
-        isAuthenticated: false
+        isAuthenticated: false,
+        req: {
+          ip: req.ip || req.connection.remoteAddress || 'Unknown',
+          headers: req.headers
+        } as any // Cast to Request type to avoid type issues
       };
       
       // If token exists, verify it and add user info to context

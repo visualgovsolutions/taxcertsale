@@ -5,11 +5,12 @@ import { GraphQLContext } from './index';
 import { GraphQLError } from 'graphql';
 import { emitAuctionStateChange } from '../websockets/auction.gateway';
 import prisma from '../../lib/prisma';
-import { Prisma } from '../../generated/prisma';
+import { Prisma, PrismaClient } from '../../generated/prisma';
 import { hashPassword } from '../utils/passwordUtils';
 import { generateAccessToken } from '../utils/jwtUtils';
 import { comparePassword } from '../utils/passwordUtils';
-import { startOfDay, endOfDay } from 'date-fns'; // Import date-fns helpers
+import { startOfDay, endOfDay, format } from 'date-fns'; // Import date-fns helpers
+import { activityLogService, ActivityLogInput as ServiceActivityLogInput } from '../services/activityLog/ActivityLogService';
 
 // Define constants for roles/statuses used in logic
 // Convert UserRole enum to a simple string map for easier checks
@@ -25,6 +26,13 @@ const AuctionStatuses = {
     ACTIVE: 'active',
     COMPLETED: 'completed',
     CANCELLED: 'cancelled'
+};
+
+const UserStatuses = {
+    ACTIVE: 'ACTIVE',
+    INACTIVE: 'INACTIVE',
+    PENDING_KYC: 'PENDING_KYC',
+    SUSPENDED: 'SUSPENDED'
 };
 
 // Socket.io server instance - will be initialized elsewhere
@@ -62,6 +70,61 @@ type ResolverParent = unknown;
 type IdArg = { id: string };
 type StatusArg = { status: string };
 type CountyIdArg = { countyId: string };
+
+// Update GraphQLContext type to include user ID
+interface ContextUser {
+    userId: string;
+    id: string; // Add ID field
+    email: string;
+    role: string;
+    firstName?: string;
+    lastName?: string;
+}
+
+interface ExtendedGraphQLContext extends GraphQLContext {
+    user: ContextUser;
+}
+
+// ActivityLog filter types
+type ActivityLogFilterInput = {
+  fromDate?: string;
+  toDate?: string;
+  actions?: string[];
+  resources?: string[];
+  statuses?: string[];
+  userId?: string;
+  searchTerm?: string;
+};
+
+type ActivityLogByResourceArgs = {
+  resource: string;
+  id?: string;
+  limit?: number;
+  offset?: number;
+};
+
+type ActivityLogByUserArgs = {
+  userId: string;
+  limit?: number;
+  offset?: number;
+};
+
+type ActivityLogArgs = {
+  filter?: ActivityLogFilterInput;
+  limit?: number;
+  offset?: number;
+  page?: number;
+};
+
+type ActivityLogInput = {
+  action: string;
+  resource: string;
+  resourceId?: string;
+  status: string;
+  details?: string;
+  userAgent?: string;
+  ipAddress?: string;
+};
 
 // Define a basic resolver map
 const resolvers = {
@@ -220,21 +283,103 @@ const resolvers = {
             if (error instanceof GraphQLError) throw error;
             throw new GraphQLError(`Failed to fetch users registered today count: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }
+    },
+
+    // Activity log queries
+    activityLogs: async (_: ResolverParent, { filter, limit = 20, offset = 0, page }: ActivityLogArgs & { page?: number }, context: GraphQLContext) => {
+      try {
+        // If page is provided, calculate the correct offset
+        const calculatedOffset = page ? (page - 1) * limit : offset;
+        
+        console.log("ACTIVITY LOGS QUERY", { filter, limit, calculatedOffset, originalPage: page });
+        const result = await activityLogService.getActivityLogs({ 
+          filter, 
+          limit, 
+          offset: calculatedOffset 
+        });
+        console.log("ACTIVITY LOGS RESULT", { count: result.totalCount, logs: result.logs.length, firstLog: result.logs[0] });
+        return result;
+      } catch (error) {
+        console.error('Error fetching activity logs:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(`Failed to fetch activity logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    },
+
+    activityLogsByResource: async (_: ResolverParent, { resource, id, limit = 20, offset = 0 }: ActivityLogByResourceArgs, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        return await activityLogService.getActivityLogsByResource({ resource, id, limit, offset });
+      } catch (error) {
+        console.error(`Error fetching activity logs for resource ${resource}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(`Failed to fetch activity logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    },
+
+    activityLogsByUser: async (_: ResolverParent, { userId, limit = 20, offset = 0 }: ActivityLogByUserArgs, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        return await activityLogService.getActivityLogsByUser({ userId, limit, offset });
+      } catch (error) {
+        console.error(`Error fetching activity logs for user ${userId}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(`Failed to fetch activity logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    },
   },
   Mutation: {
     // --- Authentication ---
-    login: async (_: ResolverParent, { email, password }: { email: string; password: string }) => {
+    login: async (_: ResolverParent, { email, password }: { email: string; password: string }, context: GraphQLContext) => {
       try {
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
+          // Log failed login attempt directly
+          await prisma.systemActivityLog.create({
+            data: {
+              action: 'LOGIN_ATTEMPT',
+              resource: 'System',
+              status: 'ERROR',
+              details: `Failed login attempt for email: ${email} - User not found`,
+              userAgent: context.req?.headers['user-agent'] || 'Unknown',
+              ipAddress: String(context.req?.ip || 'Unknown')
+            }
+          });
           throw new GraphQLError('Invalid credentials', { extensions: { code: 'UNAUTHENTICATED' } });
         }
+        
         const valid = await comparePassword(password, user.password);
         if (!valid) {
+          // Log failed login attempt directly
+          await prisma.systemActivityLog.create({
+            data: {
+              action: 'LOGIN_ATTEMPT',
+              resource: 'System',
+              status: 'ERROR',
+              details: `Failed login attempt for user: ${user.email} - Invalid password`,
+              userAgent: context.req?.headers['user-agent'] || 'Unknown',
+              ipAddress: String(context.req?.ip || 'Unknown'),
+              userId: user.id
+            }
+          });
           throw new GraphQLError('Invalid credentials', { extensions: { code: 'UNAUTHENTICATED' } });
         }
+        
         const accessToken = generateAccessToken({ userId: user.id, email: user.email, role: user.role as any });
+        
+        // Log successful login directly
+        await prisma.systemActivityLog.create({
+          data: {
+            action: 'LOGIN',
+            resource: 'System',
+            status: 'SUCCESS',
+            details: `User logged in successfully: ${user.email}`,
+            userAgent: context.req?.headers['user-agent'] || 'Unknown',
+            ipAddress: String(context.req?.ip || 'Unknown'),
+            userId: user.id
+          }
+        });
+        
         // Exclude password from returned user object
         const { password: _pw, ...safeUser } = user;
         return { accessToken, user: safeUser };
@@ -476,7 +621,89 @@ const resolvers = {
             if (error instanceof GraphQLError) throw error;
             throw new GraphQLError(`Failed to delete user: ${error.message || 'Unknown error'}`);
         }
-    }
+    },
+    updateUserStatus: async (
+        _: ResolverParent,
+        { id, status, reason }: { id: string; status: string; reason?: string },
+        context: ExtendedGraphQLContext // Use extended context type
+    ) => {
+        try {
+            // Only admins can change user status
+            checkAuth(context, [UserRoles.ADMIN]);
+            
+            // Get the current user data
+            const user = await prisma.user.findUnique({ where: { id } });
+            if (!user) {
+                throw new GraphQLError(`User with ID ${id} not found`, { extensions: { code: 'NOT_FOUND' } });
+            }
+
+            // Don't allow status changes for admin users (optional security measure)
+            if (user.role === UserRoles.ADMIN) {
+                throw new GraphQLError('Cannot modify admin user status', { extensions: { code: 'FORBIDDEN' } });
+            }
+
+            // Validate the new status
+            if (!Object.values(UserStatuses).includes(status)) {
+                throw new GraphQLError(`Invalid status: ${status}`, { extensions: { code: 'BAD_USER_INPUT' } });
+            }
+
+            // Update the user status
+            const updatedUser = await prisma.user.update({
+                where: { id },
+                data: { status }
+            });
+
+            // Log the status change using a transaction
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id },
+                    data: { status }
+                }),
+                prisma.userActivityLog.create({
+                    data: {
+                        userId: id,
+                        action: 'STATUS_CHANGE',
+                        oldValue: user.status,
+                        newValue: status,
+                        reason: reason || null,
+                        performedBy: context.user.id
+                    }
+                })
+            ]);
+
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating user status:', error);
+            if (error instanceof GraphQLError) throw error;
+            throw new GraphQLError(`Failed to update user status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    },
+    createActivityLog: async (_: ResolverParent, { input }: { input: ActivityLogInput }, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN]);
+        
+        // Get user ID from context if available
+        const userId = context.user && 'id' in context.user ? (context.user.id as string) : undefined;
+        
+        // Create the service input with the correct type
+        const serviceInput: ServiceActivityLogInput = {
+          action: input.action,
+          resource: input.resource,
+          resourceId: input.resourceId,
+          status: input.status,
+          details: input.details,
+          userAgent: input.userAgent,
+          ipAddress: input.ipAddress,
+          userId: userId
+        };
+        
+        return await activityLogService.logActivity(serviceInput);
+      } catch (error) {
+        console.error('Error creating activity log:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(`Failed to create activity log: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    },
   }
 };
 

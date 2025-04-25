@@ -16,6 +16,18 @@ type Query {
   users: [User!]! # Query to get all users
   user(id: ID!): User # Query to get a single user by ID
   usersRegisteredTodayCount: Int! # Query for count of users registered today
+  
+  # System settings related queries
+  systemSettings: SystemSettings!
+  feeStructure: FeeStructure!
+  notificationSettings: NotificationSettings!
+  securitySettings: SecuritySettings!
+  complianceReports: [ComplianceReport!]!
+  
+  # Activity logs queries
+  activityLogs(filter: ActivityLogFilterInput, limit: Int, offset: Int, page: Int): ActivityLogResponse!
+  activityLogsByResource(resource: String!, id: ID, limit: Int, offset: Int): ActivityLogResponse!
+  activityLogsByUser(userId: ID!, limit: Int, offset: Int): ActivityLogResponse!
 }
 
 # Base Mutation type (can be added later)
@@ -49,6 +61,13 @@ type Auction {
 }
 
 # --- User Types ---
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_KYC
+  SUSPENDED
+}
+
 enum UserRole {
   ADMIN
   COUNTY_OFFICIAL
@@ -61,9 +80,7 @@ type User {
   username: String!
   email: String!
   role: UserRole!
-  # Current user status (e.g., "Active", "Inactive", "Pending KYC")
-  status: String 
-  # KYC verification status (e.g., "Pending", "Verified", "Rejected")
+  status: UserStatus!
   kycStatus: String 
   createdAt: String!
   updatedAt: String!
@@ -97,6 +114,28 @@ type Mutation {
   updateUser(id: ID!, input: UpdateUserInput!): User
   deleteUser(id: ID!): User
   login(email: String!, password: String!): AuthPayload!
+  updateUserStatus(id: ID!, status: UserStatus!, reason: String): User!
+  
+  # System settings related mutations
+  updateSystemSettings(input: SystemSettingsInput!): SystemSettings!
+  updatePasswordPolicy(input: PasswordPolicyInput!): PasswordPolicy!
+  updateSessionSettings(input: SessionSettingsInput!): SessionSettings!
+  updateEmailNotificationSettings(input: EmailNotificationSettingsInput!): EmailNotificationSettings!
+  updateSystemNotificationSettings(input: SystemNotificationSettingsInput!): SystemNotificationSettings!
+  updateTwoFactorAuth(input: TwoFactorAuthInput!): TwoFactorAuth!
+  
+  # Fee structure related mutations
+  updateCertificateFee(id: ID!, input: CertificateFeeInput!): CertificateFee!
+  addCertificateFee(input: CertificateFeeInput!): CertificateFee!
+  deleteCertificateFee(id: ID!): CertificateFee!
+  updateInterestRateLimits(input: InterestRateLimitsInput!): InterestRateLimits!
+  updatePlatformFee(id: ID!, input: PlatformFeeInput!): PlatformFee!
+  
+  # Compliance report generation
+  generateComplianceReport(type: String!, parameters: JSON!): ComplianceReport!
+  
+  # Activity log mutations
+  createActivityLog(input: ActivityLogInput!): ActivityLog!
 }
 
 # Management data type
@@ -154,4 +193,292 @@ input UpdateCountyInput {
 type AuthPayload {
   accessToken: String!
   user: User!
+}
+
+# --- System Settings Types ---
+type SystemSettings {
+  applicationName: String!
+  supportEmail: String!
+  supportPhone: String
+  timezone: String!
+  dateFormat: String!
+  maintenanceMode: Boolean!
+  privacyPolicy: String
+  termsOfService: String
+}
+
+input SystemSettingsInput {
+  applicationName: String
+  supportEmail: String
+  supportPhone: String
+  timezone: String
+  dateFormat: String
+  maintenanceMode: Boolean
+  privacyPolicy: String
+  termsOfService: String
+}
+
+# --- Fee Structure Types ---
+type FeeStructure {
+  id: ID!
+  certificateFees: [CertificateFee!]!
+  interestRateLimits: InterestRateLimits!
+  platformFees: [PlatformFee!]!
+}
+
+type CertificateFee {
+  id: ID!
+  name: String!
+  description: String
+  type: String!
+  value: Float!
+  isPercentage: Boolean!
+  minAmount: Float
+  maxAmount: Float
+  active: Boolean!
+}
+
+input CertificateFeeInput {
+  name: String!
+  description: String
+  type: String!
+  value: Float!
+  isPercentage: Boolean!
+  minAmount: Float
+  maxAmount: Float
+  active: Boolean!
+}
+
+type InterestRateLimits {
+  minRate: Float!
+  maxRate: Float!
+  defaultRate: Float!
+}
+
+input InterestRateLimitsInput {
+  minRate: Float!
+  maxRate: Float!
+  defaultRate: Float!
+}
+
+type PlatformFee {
+  id: ID!
+  name: String!
+  description: String
+  value: Float!
+  isPercentage: Boolean!
+  minAmount: Float
+  maxAmount: Float
+  applicableUserRoles: [String!]
+  active: Boolean!
+}
+
+input PlatformFeeInput {
+  name: String!
+  description: String
+  value: Float!
+  isPercentage: Boolean!
+  minAmount: Float
+  maxAmount: Float
+  applicableUserRoles: [String!]
+  active: Boolean!
+}
+
+# --- Notification Settings Types ---
+type NotificationSettings {
+  emailNotifications: EmailNotificationSettings!
+  systemNotifications: SystemNotificationSettings!
+  smsNotifications: SmsNotificationSettings!
+}
+
+type EmailNotificationSettings {
+  enabled: Boolean!
+  fromName: String
+  fromEmail: String
+  replyToEmail: String
+  smtpHost: String
+  smtpPort: String
+  smtpUsername: String
+  smtpSecure: Boolean
+  emailTemplates: [EmailTemplate!]!
+}
+
+input EmailNotificationSettingsInput {
+  enabled: Boolean!
+  fromName: String
+  fromEmail: String
+  replyToEmail: String
+  smtpHost: String
+  smtpPort: String
+  smtpUsername: String
+  smtpPassword: String
+  smtpSecure: Boolean
+}
+
+type EmailTemplate {
+  id: ID!
+  name: String!
+  subject: String!
+  bodyHtml: String!
+  bodyText: String!
+  eventType: String!
+  active: Boolean!
+}
+
+type SystemNotificationSettings {
+  userRegistration: Boolean!
+  certificatePurchase: Boolean!
+  auctionStart: Boolean!
+  auctionEnd: Boolean!
+  certificateRedemption: Boolean!
+  certificateExpiration: Boolean!
+  kyc: Boolean!
+}
+
+input SystemNotificationSettingsInput {
+  userRegistration: Boolean
+  certificatePurchase: Boolean
+  auctionStart: Boolean
+  auctionEnd: Boolean
+  certificateRedemption: Boolean
+  certificateExpiration: Boolean
+  kyc: Boolean
+}
+
+type SmsNotificationSettings {
+  enabled: Boolean!
+  provider: String
+  accountSid: String
+  apiKey: String
+  phoneNumber: String
+}
+
+# --- Security Settings Types ---
+type SecuritySettings {
+  passwordPolicy: PasswordPolicy!
+  sessionSettings: SessionSettings!
+  twoFactorAuth: TwoFactorAuth!
+  ipSecurity: IpSecurity!
+}
+
+type PasswordPolicy {
+  minLength: Int!
+  requireUppercase: Boolean!
+  requireLowercase: Boolean!
+  requireNumbers: Boolean!
+  requireSpecialChars: Boolean!
+  passwordExpiryDays: Int
+  preventPasswordReuse: Boolean!
+  maxLoginAttempts: Int
+}
+
+input PasswordPolicyInput {
+  minLength: Int!
+  requireUppercase: Boolean
+  requireLowercase: Boolean
+  requireNumbers: Boolean
+  requireSpecialChars: Boolean
+  passwordExpiryDays: Int
+  preventPasswordReuse: Boolean
+  maxLoginAttempts: Int
+}
+
+type SessionSettings {
+  sessionTimeoutMinutes: Int!
+  rememberMeDurationDays: Int
+  enforceOneSessionPerUser: Boolean!
+  tokenExpirationHours: Int!
+}
+
+input SessionSettingsInput {
+  sessionTimeoutMinutes: Int!
+  rememberMeDurationDays: Int
+  enforceOneSessionPerUser: Boolean
+  tokenExpirationHours: Int!
+}
+
+type TwoFactorAuth {
+  enabled: Boolean!
+  requiredForRoles: [String!]
+  allowRememberDevice: Boolean!
+  rememberDeviceDurationDays: Int
+}
+
+input TwoFactorAuthInput {
+  enabled: Boolean!
+  requiredForRoles: [String!]
+  allowRememberDevice: Boolean
+  rememberDeviceDurationDays: Int
+}
+
+type IpSecurity {
+  whitelistEnabled: Boolean!
+  ipWhitelist: String
+  blacklistEnabled: Boolean!
+  ipBlacklist: String
+  maxRequestsPerMinute: Int
+}
+
+# --- Compliance Report Types ---
+type ComplianceReport {
+  id: ID!
+  type: ReportType!
+  generatedAt: String!
+  status: ReportStatus!
+  downloadUrl: String
+  parameters: JSON
+}
+
+enum ReportType {
+  TAX_1099_INT
+  CHAPTER_197
+  AUCTION_COMPLIANCE
+}
+
+enum ReportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+# Activity Log Types
+type ActivityLog {
+  id: ID!
+  timestamp: String!
+  user: User
+  action: String!
+  resource: String!
+  resourceId: String
+  status: String!
+  details: String
+  userAgent: String
+  ipAddress: String
+}
+
+type ActivityLogResponse {
+  totalCount: Int!
+  logs: [ActivityLog!]!
+}
+
+input ActivityLogFilterInput {
+  fromDate: String
+  toDate: String
+  actions: [String!]
+  resources: [String!]
+  statuses: [String!]
+  userId: ID
+  searchTerm: String
+}
+
+input ActivityLogInput {
+  timestamp: String!
+  user: ID!
+  action: String!
+  resource: String!
+  resourceId: String
+  status: String!
+  details: String
+  userAgent: String
+  ipAddress: String
 } 
