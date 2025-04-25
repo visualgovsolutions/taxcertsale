@@ -402,6 +402,201 @@ const resolvers = {
         );
       }
     },
+
+    // Dashboard Analytics
+    certificatesSummary: async (_: any, __: any, context: any) => {
+      try {
+        // Get total certificates count
+        const total = await prisma.certificate.count();
+
+        // Get redeemed certificates count
+        const redeemed = await prisma.certificate.count({
+          where: { status: 'REDEEMED' },
+        });
+
+        // Get available certificates count
+        const available = await prisma.certificate.count({
+          where: { status: 'AVAILABLE' },
+        });
+
+        // Get certificates in auction count
+        const activeInAuction = await prisma.certificate.count({
+          where: {
+            status: 'ASSIGNED',
+            auction: {
+              status: 'ACTIVE',
+            },
+          },
+        });
+
+        // Get total value of all certificates
+        const totalValueResult = await prisma.certificate.aggregate({
+          _sum: {
+            faceValue: true,
+          },
+        });
+
+        return {
+          total,
+          redeemed,
+          available,
+          activeInAuction,
+          totalValue: totalValueResult._sum.faceValue || 0,
+        };
+      } catch (error) {
+        console.error('Error fetching certificates summary:', error);
+        throw error;
+      }
+    },
+
+    userActivity: async (_: any, { timeRange }: { timeRange: string }, context: any) => {
+      try {
+        // For MVP, return mock data
+        // In a production implementation, this would query actual user activity from the database
+        // based on system_activity_logs or similar
+
+        const mockData = {
+          day: [
+            { date: '9AM', count: 12 },
+            { date: '12PM', count: 25 },
+            { date: '3PM', count: 18 },
+            { date: '6PM', count: 30 },
+            { date: '9PM', count: 22 },
+          ],
+          week: [
+            { date: 'Mon', count: 12 },
+            { date: 'Tue', count: 19 },
+            { date: 'Wed', count: 15 },
+            { date: 'Thu', count: 22 },
+            { date: 'Fri', count: 28 },
+            { date: 'Sat', count: 10 },
+            { date: 'Sun', count: 8 },
+          ],
+          month: [
+            { date: 'Week 1', count: 52 },
+            { date: 'Week 2', count: 65 },
+            { date: 'Week 3', count: 59 },
+            { date: 'Week 4', count: 78 },
+          ],
+          quarter: [
+            { date: 'Jan', count: 188 },
+            { date: 'Feb', count: 201 },
+            { date: 'Mar', count: 235 },
+          ],
+          year: [
+            { date: 'Q1', count: 624 },
+            { date: 'Q2', count: 712 },
+            { date: 'Q3', count: 542 },
+            { date: 'Q4', count: 621 },
+          ],
+        };
+
+        return mockData[timeRange as keyof typeof mockData] || mockData.week;
+      } catch (error) {
+        console.error('Error fetching user activity:', error);
+        throw error;
+      }
+    },
+
+    redemptionRate: async (_: any, { timeRange }: { timeRange: string }, context: any) => {
+      try {
+        // For MVP, return mock data
+        // In a production implementation, this would calculate actual redemption rates
+
+        const mockData = {
+          day: [
+            { date: '9AM', rate: 65 },
+            { date: '12PM', rate: 68 },
+            { date: '3PM', rate: 70 },
+            { date: '6PM', rate: 72 },
+            { date: '9PM', rate: 75 },
+          ],
+          week: [
+            { date: 'Mon', rate: 65 },
+            { date: 'Tue', rate: 66 },
+            { date: 'Wed', rate: 68 },
+            { date: 'Thu', rate: 70 },
+            { date: 'Fri', rate: 72 },
+            { date: 'Sat', rate: 72 },
+            { date: 'Sun', rate: 73 },
+          ],
+          month: [
+            { date: 'Week 1', rate: 62 },
+            { date: 'Week 2', rate: 65 },
+            { date: 'Week 3', rate: 68 },
+            { date: 'Week 4', rate: 71 },
+          ],
+          quarter: [
+            { date: 'Jan', rate: 60 },
+            { date: 'Feb', rate: 65 },
+            { date: 'Mar', rate: 68 },
+          ],
+          year: [
+            { date: 'Q1', rate: 60 },
+            { date: 'Q2', rate: 65 },
+            { date: 'Q3', rate: 70 },
+            { date: 'Q4', rate: 75 },
+          ],
+        };
+
+        return mockData[timeRange as keyof typeof mockData] || mockData.month;
+      } catch (error) {
+        console.error('Error fetching redemption rate:', error);
+        throw error;
+      }
+    },
+
+    usersRegisteredTodayCount: async (_: any, __: any, context: any) => {
+      try {
+        // Get today's date at midnight
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Count users registered today
+        const count = await prisma.user.count({
+          where: {
+            createdAt: {
+              gte: today,
+            },
+          },
+        });
+
+        return count;
+      } catch (error) {
+        console.error('Error fetching users registered today:', error);
+        throw error;
+      }
+    },
+
+    activeAuctions: async (_: any, __: any, context: any) => {
+      try {
+        const auctions = await prisma.auction.findMany({
+          where: {
+            status: 'ACTIVE',
+          },
+        });
+
+        return auctions;
+      } catch (error) {
+        console.error('Error fetching active auctions:', error);
+        throw error;
+      }
+    },
+
+    upcomingAuctions: async (_: any, __: any, context: any) => {
+      try {
+        const auctions = await prisma.auction.findMany({
+          where: {
+            status: 'UPCOMING',
+          },
+        });
+
+        return auctions;
+      } catch (error) {
+        console.error('Error fetching upcoming auctions:', error);
+        throw error;
+      }
+    },
   },
   Mutation: {
     // --- Authentication ---

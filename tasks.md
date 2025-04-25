@@ -14,12 +14,12 @@
 
 #### 1. **Admin Dashboard UI**
 
-- [🚧] Admin Dashboard Overview Page
+- [✅] Admin Dashboard Overview Page
 - [✅] Auction Management Page (list, create, edit, activate, close, cancel)
 - [✅] Certificate Management Page (list, assign, mark as redeemed, create)
 - [✅] User Management Page (list, roles, activity logs)
-- [🚧] Admin Navigation (sidebar/header)
-- [ ] Admin Stats/Analytics Widgets
+- [✅] Admin Navigation (sidebar/header)
+- [🚧] Admin Stats/Analytics Widgets
 
 #### 2. **Bidder Dashboard UI**
 

@@ -28,6 +28,11 @@ type Query {
   activityLogs(filter: ActivityLogFilterInput, limit: Int, offset: Int, page: Int): ActivityLogResponse!
   activityLogsByResource(resource: String!, id: ID, limit: Int, offset: Int): ActivityLogResponse!
   activityLogsByUser(userId: ID!, limit: Int, offset: Int): ActivityLogResponse!
+  
+  # Dashboard Analytics
+  certificatesSummary: CertificatesSummary!
+  userActivity(timeRange: String!): [ActivityDataPoint!]!
+  redemptionRate(timeRange: String!): [RedemptionRatePoint!]!
 }
 
 # Base Mutation type (can be added later)
@@ -488,4 +493,23 @@ input ActivityLogInput {
   details: String
   userAgent: String
   ipAddress: String
+}
+
+# New types for dashboard analytics
+type CertificatesSummary {
+  total: Int!
+  redeemed: Int!
+  available: Int!
+  activeInAuction: Int!
+  totalValue: Float!
+}
+
+type ActivityDataPoint {
+  date: String!
+  count: Int!
+}
+
+type RedemptionRatePoint {
+  date: String!
+  rate: Float!
 } 
