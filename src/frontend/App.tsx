@@ -21,37 +21,43 @@ import AdminCountiesPage from './pages/AdminCountiesPage';
 import AdminRegistrationsPage from './pages/AdminRegistrationsPage';
 import AdminAuditLogsPage from './pages/AdminAuditLogsPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
-import AdminBatchesPage from "./pages/AdminBatchesPage";
-import AdminPaymentsPage from "./pages/AdminPaymentsPage";
-import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
-import AdminNotificationsPage from "./pages/AdminNotificationsPage";
-import AdminSystemConfigPage from "./pages/AdminSystemConfigPage";
-import DataImportExportPage from "./pages/admin/DataImportExportPage";
-import AuctionManagementPage from "./pages/admin/AuctionManagementPage";
-import CertificateManagementPage from "./pages/admin/CertificateManagementPage";
+import AdminBatchesPage from './pages/AdminBatchesPage';
+import AdminPaymentsPage from './pages/AdminPaymentsPage';
+import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
+import AdminNotificationsPage from './pages/AdminNotificationsPage';
+import AdminSystemConfigPage from './pages/AdminSystemConfigPage';
+import DataImportExportPage from './pages/admin/DataImportExportPage';
+import AuctionManagementPage from './pages/admin/AuctionManagementPage';
+import CertificateManagementPage from './pages/admin/CertificateManagementPage';
 import AdminTestPage from './pages/AdminTestPage';
 
 import { useAuth } from './context/AuthContext';
 
 /**
  * ⚠️ CRITICAL PATH: MAIN ROUTER DEFINITION ⚠️
- * 
+ *
  * This is the PRIMARY router configuration for the entire application.
  * All routes MUST be defined here to be accessible.
- * 
+ *
  * DO NOT create parallel router configurations elsewhere (e.g., AppRouter.tsx).
  * If you need to refactor routes, move ALL routes together.
- * 
+ *
  * Any routes defined in AdminLayout.tsx sidebar MUST have a corresponding route here.
- * 
+ *
  * Sync the following files when adding/changing routes:
  * 1. This file (App.tsx) - The actual route definitions
  * 2. components/admin/AdminLayout.tsx - Sidebar navigation links
  */
 
 // Updated Protected route component to use AuthContext
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { isAuthenticated } = useAuth(); // Get auth state from context
+const ProtectedRoute = ({
+  children,
+  requiredRoles = [],
+}: {
+  children: JSX.Element;
+  requiredRoles?: string[];
+}) => {
+  const { isAuthenticated, user } = useAuth(); // Get auth state from context
 
   if (!isAuthenticated) {
     // Redirect them to the /login page, but save the current location they were
@@ -59,6 +65,18 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     // along to that page after they login, which is a nicer user experience
     // than dropping them off on the home page.
     return <Navigate to="/login" replace />;
+  }
+
+  // Check for required roles if specified
+  if (requiredRoles.length > 0 && user?.role) {
+    if (!requiredRoles.includes(user.role)) {
+      // User doesn't have the required role - redirect to appropriate page
+      if (user.role === 'ADMIN' || user.role === 'COUNTY_OFFICIAL') {
+        return <Navigate to="/admin/dashboard" replace />;
+      } else {
+        return <Navigate to="/dashboard" replace />;
+      }
+    }
   }
 
   return children;
@@ -100,13 +118,14 @@ function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRoles={['ADMIN', 'COUNTY_OFFICIAL']}>
             <AdminLayout />
           </ProtectedRoute>
         }
       >
         {/* ⚠️ CRITICAL: All admin routes must be defined here to match AdminLayout.tsx sidebar links */}
-        <Route index element={<Navigate to="dashboard" replace />} /> {/* Redirect /admin to /admin/dashboard */}
+        <Route index element={<Navigate to="dashboard" replace />} />{' '}
+        {/* Redirect /admin to /admin/dashboard */}
         <Route path="dashboard" element={<AdminDashboardPage />} />
         <Route path="auctions" element={<AdminAuctionsPage />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
