@@ -1,0 +1,138 @@
+# Certificate Queries
+query GetCertificates {
+  certificates(limit: 10) {
+    totalCount
+    certificates {
+      id
+      certificateNumber
+      countyId
+      parcelId
+      propertyAddress
+      ownerName
+      faceValue
+      status
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+query GetCertificateById($id: ID!) {
+  certificate(id: $id) {
+    id
+    certificateNumber
+    countyId
+    parcelId
+    propertyAddress
+    ownerName
+    faceValue
+    auctionDate
+    status
+    interestRate
+    purchaserId
+    purchaseDate
+    redemptionDate
+    expirationDate
+    batchId
+    createdAt
+    updatedAt
+  }
+}
+
+query GetCertificatesByStatus($status: CertificateStatus!) {
+  certificatesByStatus(status: $status) {
+    id
+    certificateNumber
+    status
+    faceValue
+    parcelId
+  }
+}
+
+query GetCertificatesByCounty($countyId: ID!) {
+  certificatesByCounty(countyId: $countyId) {
+    id
+    certificateNumber
+    status
+    faceValue
+    parcelId
+  }
+}
+
+query GetCertificatesByAuction($auctionId: ID!) {
+  certificatesByAuction(auctionId: $auctionId) {
+    id
+    certificateNumber
+    status
+    faceValue
+    parcelId
+  }
+}
+
+# Certificate Mutations
+mutation CreateCertificate($input: CreateCertificateInput!) {
+  createCertificate(input: $input) {
+    id
+    certificateNumber
+    countyId
+    parcelId
+    faceValue
+    status
+    createdAt
+  }
+}
+
+mutation UpdateCertificate($id: ID!, $input: UpdateCertificateInput!) {
+  updateCertificate(id: $id, input: $input) {
+    id
+    certificateNumber
+    status
+    updatedAt
+  }
+}
+
+mutation DeleteCertificate($id: ID!) {
+  deleteCertificate(id: $id)
+}
+
+mutation AssignCertificatesToAuction($certificateIds: [ID!]!, $auctionId: ID!) {
+  assignCertificatesToAuction(certificateIds: $certificateIds, auctionId: $auctionId)
+}
+
+mutation MarkCertificateAsRedeemed($id: ID!, $redemptionDate: String!) {
+  markCertificateAsRedeemed(id: $id, redemptionDate: $redemptionDate) {
+    id
+    certificateNumber
+    status
+    redemptionDate
+    updatedAt
+  }
+}
+
+mutation UpdateCertificateStatus($id: ID!, $status: CertificateStatus!) {
+  updateCertificateStatus(id: $id, status: $status) {
+    id
+    certificateNumber
+    status
+    updatedAt
+  }
+}
+
+# Example variables for mutations
+{
+  "id": "certificate-id-here",
+  "input": {
+    "certificateNumber": "CERT-2023-0001",
+    "countyId": "county-id-here",
+    "parcelId": "123456789",
+    "propertyAddress": "123 Main St, Anytown, FL",
+    "ownerName": "John Doe",
+    "faceValue": 5000.00,
+    "status": "AVAILABLE"
+  },
+  "certificateIds": ["cert-id-1", "cert-id-2"],
+  "auctionId": "auction-id-here",
+  "redemptionDate": "2023-06-15T12:00:00Z",
+  "status": "REDEEMED",
+  "countyId": "county-id-here"
+} 
