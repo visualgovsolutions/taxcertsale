@@ -16,7 +16,7 @@
 
 - [🚧] Admin Dashboard Overview Page
 - [✅] Auction Management Page (list, create, edit, activate, close, cancel)
-- [🚧] Certificate Management Page (list, assign, mark as redeemed)
+- [✅] Certificate Management Page (list, assign, mark as redeemed, create)
 - [✅] User Management Page (list, roles, activity logs)
 - [🚧] Admin Navigation (sidebar/header)
 - [ ] Admin Stats/Analytics Widgets
@@ -55,7 +55,7 @@
 
 - [🚧] `AdminDashboardPage`
 - [✅] `AuctionManagementPage`
-- [🚧] `CertificateManagementPage`
+- [✅] `CertificateManagementPage`
 - [✅] `UserManagementPage`
 - [ ] `BidderDashboardPage`
 - [✅] `LoginPage`

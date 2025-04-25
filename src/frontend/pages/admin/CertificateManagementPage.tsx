@@ -13,6 +13,9 @@ import CertificateListTable from '../../components/admin/CertificateListTable';
 import CertificateAssignModal from '../../components/admin/CertificateAssignModal';
 import CertificateRedemptionModal from '../../components/admin/CertificateRedemptionModal';
 import CertificateDetailsModal from '../../components/admin/CertificateDetailsModal';
+import CertificateCreateModal, {
+  CertificateCreateData,
+} from '../../components/admin/CertificateCreateModal';
 import type { CertificateStatus } from '../../components/admin/CertificateListTable';
 
 // GraphQL query to fetch certificates
@@ -66,6 +69,33 @@ const REDEEM_CERTIFICATE = gql`
   }
 `;
 
+// GraphQL mutation to create a new certificate
+const CREATE_CERTIFICATE = gql`
+  mutation CreateCertificate(
+    $parcelId: String!
+    $propertyAddress: String!
+    $ownerName: String!
+    $faceValue: Float!
+    $interestRate: Float!
+  ) {
+    createCertificate(
+      parcelId: $parcelId
+      propertyAddress: $propertyAddress
+      ownerName: $ownerName
+      faceValue: $faceValue
+      interestRate: $interestRate
+    ) {
+      id
+      parcelId
+      propertyAddress
+      ownerName
+      faceValue
+      interestRate
+      status
+    }
+  }
+`;
+
 // GraphQL query to fetch auctions for assignment
 const GET_AUCTIONS = gql`
   query GetAuctions($status: String) {
@@ -107,6 +137,7 @@ const CertificateManagementPage: React.FC = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showRedemptionModal, setShowRedemptionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -161,6 +192,21 @@ const CertificateManagementPage: React.FC = () => {
     },
   });
 
+  // Mutation for creating a new certificate
+  const [createCertificate, { loading: createLoading }] = useMutation(CREATE_CERTIFICATE, {
+    onCompleted: () => {
+      setSuccess('Certificate successfully created');
+      setShowCreateModal(false);
+      refetch();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    },
+    onError: error => {
+      setError(`Error creating certificate: ${error.message}`);
+    },
+  });
+
   const handleAssignToAuction = (certificate: Certificate) => {
     setSelectedCertificate(certificate);
     setShowAssignModal(true);
@@ -176,6 +222,11 @@ const CertificateManagementPage: React.FC = () => {
   const handleViewDetails = (certificate: Certificate) => {
     setSelectedCertificate(certificate);
     setShowDetailsModal(true);
+    setError(null);
+  };
+
+  const handleShowCreateModal = () => {
+    setShowCreateModal(true);
     setError(null);
   };
 
@@ -196,6 +247,13 @@ const CertificateManagementPage: React.FC = () => {
         redemptionAmount,
         redemptionDate,
       },
+    });
+  };
+
+  // Handle create certificate
+  const handleCreate = (certificateData: CertificateCreateData) => {
+    createCertificate({
+      variables: certificateData,
     });
   };
 
@@ -225,7 +283,7 @@ const CertificateManagementPage: React.FC = () => {
           </Breadcrumb>
         </div>
         <div className="flex space-x-2">
-          <Button color="success" size="sm">
+          <Button color="success" size="sm" onClick={handleShowCreateModal}>
             <HiPlus className="mr-2 h-5 w-5" />
             New Certificate
           </Button>
@@ -306,6 +364,13 @@ const CertificateManagementPage: React.FC = () => {
         show={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         certificate={selectedCertificate}
+      />
+
+      <CertificateCreateModal
+        show={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreate}
+        loading={createLoading}
       />
     </div>
   );

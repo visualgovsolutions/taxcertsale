@@ -136,6 +136,13 @@ type Mutation {
   
   # Activity log mutations
   createActivityLog(input: ActivityLogInput!): ActivityLog!
+  createCertificate(
+    parcelId: String!
+    propertyAddress: String!
+    ownerName: String!
+    faceValue: Float!
+    interestRate: Float!
+  ): Certificate!
 }
 
 # Management data type

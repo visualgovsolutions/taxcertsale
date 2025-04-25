@@ -14,6 +14,11 @@ import {
   activityLogService,
   ActivityLogInput as ServiceActivityLogInput,
 } from '../services/activityLog/ActivityLogService';
+import { AuthenticationError, ForbiddenError } from 'apollo-server-express';
+import { User, Auction, Certificate } from '@prisma/client';
+import { AuctionService } from '../services/auction/AuctionService';
+import { WebSocketService } from '../services/websocket/WebSocketService';
+import { ApolloError } from 'apollo-server-express';
 
 // Define constants for roles/statuses used in logic
 // Convert UserRole enum to a simple string map for easier checks
@@ -893,6 +898,71 @@ const resolvers = {
         throw new GraphQLError(
           `Failed to create activity log: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
+      }
+    },
+    // Create Certificate
+    createCertificate: async (
+      _: any,
+      {
+        parcelId,
+        propertyAddress,
+        ownerName,
+        faceValue,
+        interestRate,
+      }: {
+        parcelId: string;
+        propertyAddress: string;
+        ownerName: string;
+        faceValue: number;
+        interestRate: number;
+      },
+      context: any
+    ) => {
+      try {
+        // Check authentication
+        if (!context.user) {
+          throw new Error('You must be logged in to create a certificate');
+        }
+
+        // Check authorization (only admins and county users can create certificates)
+        if (!['ADMIN', 'COUNTY'].includes(context.user.role)) {
+          throw new Error('You do not have permission to create certificates');
+        }
+
+        // Create the certificate
+        const certificate = await prisma.certificate.create({
+          data: {
+            parcelId,
+            propertyAddress,
+            ownerName,
+            faceValue,
+            interestRate,
+            status: 'AVAILABLE',
+          },
+        });
+
+        // Log the activity
+        await prisma.systemActivityLog.create({
+          data: {
+            userId: context.user.id,
+            action: 'CREATE',
+            resource: 'CERTIFICATE',
+            resourceId: certificate.id,
+            status: 'SUCCESS',
+            details: JSON.stringify({
+              parcelId,
+              propertyAddress,
+              ownerName,
+              faceValue,
+              interestRate,
+            }),
+          },
+        });
+
+        return certificate;
+      } catch (error) {
+        console.error('Error creating certificate:', error);
+        throw error;
       }
     },
   },
