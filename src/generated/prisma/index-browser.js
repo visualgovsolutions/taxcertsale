@@ -129,6 +129,30 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.UserActivityLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  action: 'action',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  reason: 'reason',
+  performedBy: 'performedBy',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SystemActivityLogScalarFieldEnum = {
+  id: 'id',
+  timestamp: 'timestamp',
+  userId: 'userId',
+  userAgent: 'userAgent',
+  ipAddress: 'ipAddress',
+  action: 'action',
+  resource: 'resource',
+  resourceId: 'resourceId',
+  status: 'status',
+  details: 'details'
+};
+
 exports.Prisma.CountyScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -216,6 +240,8 @@ exports.Prisma.NullsOrder = {
 
 exports.Prisma.ModelName = {
   User: 'User',
+  UserActivityLog: 'UserActivityLog',
+  SystemActivityLog: 'SystemActivityLog',
   County: 'County',
   Property: 'Property',
   Auction: 'Auction',

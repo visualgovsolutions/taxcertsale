@@ -17,19 +17,63 @@ datasource db {
 // Define models based on previous TypeORM entities
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String // Hashed password
-  email     String   @unique
-  role      String   @default("user") // e.g., "user", "admin"
-  status    String?  @default("Pending KYC") // e.g., "Active", "Inactive", "Pending KYC"
-  kycStatus String?  @default("Pending") // e.g., "Pending", "Verified", "Rejected"
+  id       String @id @default(uuid())
+  username String @unique
+  password String // Hashed password
+  email    String @unique
+  role     String @default("user") // e.g., "user", "admin", "county_official", "investor"
+
+  // User status (e.g., Active, Inactive for login control)
+  status String @default("PENDING_KYC") // Updated to match GraphQL enum
+
+  // Know Your Customer status (tracking verification)
+  kycStatus String? @default("Pending") // e.g., "Pending", "Verified", "Rejected"
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  bids Bid[]
+  bids               Bid[]
+  activityLogs       UserActivityLog[] // Add relation to activity logs
+  systemActivityLogs SystemActivityLog[] // Add relation to system activity logs
 
   @@map("users")
+}
+
+model UserActivityLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  action      String // e.g., "STATUS_CHANGE"
+  oldValue    String?  @map("old_value")
+  newValue    String   @map("new_value")
+  reason      String?
+  performedBy String   @map("performed_by") // ID of the admin who made the change
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_activity_logs")
+}
+
+// New model for system-wide activity logs
+model SystemActivityLog {
+  id         String   @id @default(uuid())
+  timestamp  DateTime @default(now())
+  userId     String?  @map("user_id")
+  userAgent  String?  @map("user_agent")
+  ipAddress  String?  @map("ip_address")
+  action     String // "LOGIN", "LOGOUT", "CONFIGURATION", "BID", "DOCUMENT", etc.
+  resource   String // "System", "Auction", "Property", "UserAccount", etc.
+  resourceId String?  @map("resource_id") // ID of the affected resource, if applicable
+  status     String // "SUCCESS", "WARNING", "ERROR", "INFO"
+  details    String? // Additional details about the action
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp, status])
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@map("system_activity_logs")
 }
 
 model County {
