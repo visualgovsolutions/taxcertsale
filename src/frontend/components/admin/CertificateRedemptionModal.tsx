@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Label, TextInput } from 'flowbite-react';
 
 interface Certificate {
@@ -16,6 +16,7 @@ interface CertificateRedemptionModalProps {
   onClose: () => void;
   certificate: Certificate | null;
   onRedeem: (certificateId: string, redemptionAmount: number, redemptionDate: string) => void;
+  loading?: boolean;
 }
 
 const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
@@ -23,12 +24,23 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
   onClose,
   certificate,
   onRedeem,
+  loading = false,
 }) => {
   const [redemptionAmount, setRedemptionAmount] = useState('');
   const [redemptionDate, setRedemptionDate] = useState(
     new Date().toISOString().split('T')[0] // YYYY-MM-DD format
   );
   const [errors, setErrors] = useState<{ amount?: string; date?: string }>({});
+
+  // Reset form when modal is opened with a new certificate
+  useEffect(() => {
+    if (show && certificate) {
+      // Set default values when opening modal
+      setRedemptionAmount(calculateEstimatedAmount().toString());
+      setRedemptionDate(new Date().toISOString().split('T')[0]);
+      setErrors({});
+    }
+  }, [show, certificate]);
 
   // Calculate estimated redemption amount based on face value and interest
   const calculateEstimatedAmount = (): number => {
@@ -40,11 +52,11 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
     const interestRate = certificate.interestRate / 100;
     const timeInYears = 1; // Placeholder, would be actual time calculation
 
-    return principal * (1 + interestRate * timeInYears);
+    return parseFloat((principal * (1 + interestRate * timeInYears)).toFixed(2));
   };
 
   const handleRedeem = () => {
-    if (!certificate) return;
+    if (!certificate || loading) return;
 
     const newErrors: { amount?: string; date?: string } = {};
 
@@ -65,10 +77,11 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
     }
 
     onRedeem(certificate.id, amount, redemptionDate);
-    handleClose();
   };
 
   const handleClose = () => {
+    if (loading) return; // Prevent closing while loading
+
     setRedemptionAmount('');
     setRedemptionDate(new Date().toISOString().split('T')[0]);
     setErrors({});
@@ -121,6 +134,7 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
                   }}
                   placeholder={`Estimated: $${estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   color={errors.amount ? 'failure' : undefined}
+                  disabled={loading}
                 />
                 {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
                 <p className="text-xs text-gray-500 mt-1">
@@ -139,6 +153,7 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
                     setErrors({ ...errors, date: undefined });
                   }}
                   color={errors.date ? 'failure' : undefined}
+                  disabled={loading}
                 />
                 {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
               </div>
@@ -147,8 +162,10 @@ const CertificateRedemptionModal: React.FC<CertificateRedemptionModalProps> = ({
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button onClick={handleRedeem}>Mark as Redeemed</Button>
-        <Button color="gray" onClick={handleClose}>
+        <Button onClick={handleRedeem} disabled={loading} isProcessing={loading}>
+          Mark as Redeemed
+        </Button>
+        <Button color="gray" onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
       </Modal.Footer>

@@ -1,24 +1,11 @@
-import React, { useState } from 'react';
-import { Modal, Button, Label, Select, TextInput } from 'flowbite-react';
-import { useQuery, gql } from '@apollo/client';
-
-const GET_ACTIVE_AUCTIONS = gql`
-  query GetActiveAuctions {
-    auctions(status: ["DRAFT", "SCHEDULED", "ACTIVE"]) {
-      id
-      title
-      county
-      status
-      startDate
-      endDate
-    }
-  }
-`;
+import React, { useState, useEffect } from 'react';
+import { Modal, Button, Label, Select, TextInput, Spinner } from 'flowbite-react';
 
 interface Auction {
   id: string;
-  title: string;
-  county: string;
+  name?: string; // Support both title and name
+  title?: string;
+  county?: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -39,6 +26,8 @@ interface CertificateAssignModalProps {
   onClose: () => void;
   certificate: Certificate | null;
   onAssign: (certificateId: string, auctionId: string) => void;
+  auctions: Auction[];
+  loading?: boolean;
 }
 
 const CertificateAssignModal: React.FC<CertificateAssignModalProps> = ({
@@ -46,14 +35,19 @@ const CertificateAssignModal: React.FC<CertificateAssignModalProps> = ({
   onClose,
   certificate,
   onAssign,
+  auctions = [],
+  loading = false,
 }) => {
   const [selectedAuctionId, setSelectedAuctionId] = useState('');
   const [minBidAmount, setMinBidAmount] = useState('');
 
-  const { loading, error, data } = useQuery(GET_ACTIVE_AUCTIONS, {
-    fetchPolicy: 'network-only',
-    skip: !show,
-  });
+  // Reset form when modal is opened with a new certificate
+  useEffect(() => {
+    if (show) {
+      setSelectedAuctionId('');
+      setMinBidAmount('');
+    }
+  }, [show, certificate]);
 
   const handleAssign = () => {
     if (!certificate || !selectedAuctionId) return;
@@ -102,23 +96,32 @@ const CertificateAssignModal: React.FC<CertificateAssignModalProps> = ({
             <div className="mt-2">
               <div className="mb-3">
                 <Label htmlFor="auctionId">Select Auction</Label>
-                <Select
-                  id="auctionId"
-                  value={selectedAuctionId}
-                  onChange={e => setSelectedAuctionId(e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">Select an auction...</option>
-                  {data?.auctions.map((auction: Auction) => (
-                    <option key={auction.id} value={auction.id}>
-                      {auction.title} ({auction.status})
-                    </option>
-                  ))}
-                </Select>
-                {error && (
-                  <p className="text-red-500 text-sm mt-1">
-                    Error loading auctions: {error.message}
-                  </p>
+                {loading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Spinner size="md" />
+                    <span className="ml-2">Loading auctions...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Select
+                      id="auctionId"
+                      value={selectedAuctionId}
+                      onChange={e => setSelectedAuctionId(e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">Select an auction...</option>
+                      {auctions.map((auction: Auction) => (
+                        <option key={auction.id} value={auction.id}>
+                          {auction.name || auction.title} ({auction.status})
+                        </option>
+                      ))}
+                    </Select>
+                    {auctions.length === 0 && (
+                      <p className="text-amber-500 text-sm mt-1">
+                        No available auctions found. Create an auction first.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -140,10 +143,14 @@ const CertificateAssignModal: React.FC<CertificateAssignModalProps> = ({
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button onClick={handleAssign} disabled={!selectedAuctionId}>
+        <Button
+          onClick={handleAssign}
+          disabled={!selectedAuctionId || loading}
+          isProcessing={loading}
+        >
           Assign to Auction
         </Button>
-        <Button color="gray" onClick={handleClose}>
+        <Button color="gray" onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
       </Modal.Footer>

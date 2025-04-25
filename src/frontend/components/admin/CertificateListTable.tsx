@@ -5,30 +5,10 @@
  * Supports filtering, searching, and actions like assigning to auctions and marking as redeemed.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, Button, Badge, TextInput } from 'flowbite-react';
-import { useQuery, gql } from '@apollo/client';
 import { format } from 'date-fns';
 import { HiSearch } from 'react-icons/hi';
-
-export const GET_CERTIFICATES = gql`
-  query GetCertificates($search: String, $status: [CertificateStatus!]) {
-    certificates(search: $search, status: $status) {
-      id
-      parcelId
-      propertyAddress
-      ownerName
-      faceValue
-      interestRate
-      status
-      redemptionAmount
-      redemptionDate
-      auctionId
-      createdAt
-      updatedAt
-    }
-  }
-`;
 
 export type CertificateStatus = 'AVAILABLE' | 'ASSIGNED' | 'SOLD' | 'REDEEMED';
 
@@ -48,9 +28,11 @@ interface Certificate {
 }
 
 interface CertificateListTableProps {
+  certificates: Certificate[];
   onAssignToAuction: (certificate: Certificate) => void;
   onMarkAsRedeemed: (certificate: Certificate) => void;
   onViewDetails: (certificate: Certificate) => void;
+  loading?: boolean;
 }
 
 const statusColors = {
@@ -61,22 +43,30 @@ const statusColors = {
 };
 
 const CertificateListTable: React.FC<CertificateListTableProps> = ({
+  certificates,
   onAssignToAuction,
   onMarkAsRedeemed,
   onViewDetails,
+  loading = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { loading, error, data } = useQuery(GET_CERTIFICATES, {
-    variables: { search: searchTerm },
-    fetchPolicy: 'network-only',
-  });
+  // Filter certificates based on search term
+  const filteredCertificates = useMemo(() => {
+    if (!searchTerm.trim()) return certificates;
+
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return certificates.filter(
+      cert =>
+        cert.parcelId.toLowerCase().includes(lowerSearchTerm) ||
+        cert.propertyAddress.toLowerCase().includes(lowerSearchTerm) ||
+        cert.ownerName.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [certificates, searchTerm]);
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
-
-  if (error) return <div>Error loading certificates: {error.message}</div>;
 
   return (
     <div className="space-y-4">
@@ -110,8 +100,14 @@ const CertificateListTable: React.FC<CertificateListTableProps> = ({
                 <div className="text-center">Loading certificates...</div>
               </Table.Cell>
             </Table.Row>
+          ) : filteredCertificates.length === 0 ? (
+            <Table.Row>
+              <Table.Cell colSpan={8}>
+                <div className="text-center">No certificates found</div>
+              </Table.Cell>
+            </Table.Row>
           ) : (
-            data?.certificates.map((certificate: Certificate) => (
+            filteredCertificates.map((certificate: Certificate) => (
               <Table.Row key={certificate.id}>
                 <Table.Cell className="font-medium">{certificate.parcelId}</Table.Cell>
                 <Table.Cell>{certificate.propertyAddress}</Table.Cell>
