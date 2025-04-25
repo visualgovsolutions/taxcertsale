@@ -73,6 +73,7 @@ pids
 
 # Cursor specific
 .cursor/workspace/
+.cursor/rules/
 
 # Added by Claude Task Master
 logs
@@ -103,4 +104,11 @@ src/generated/prisma/
 
 # Screenshots / Test Output
 tests/screenshots/
-screenshot*.png 
+screenshot*.png
+*.png
+*.html
+debug-logs.js
+e2e-screenshots/
+
+# Hot module replacement files
+*.hot-update.* 
