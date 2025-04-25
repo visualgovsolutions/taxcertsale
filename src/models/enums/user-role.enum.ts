@@ -1,5 +1,6 @@
 export enum UserRole {
-  ADMIN = 'admin',
-  BIDDER = 'bidder',
-  STAFF = 'staff'
-} 
+  ADMIN = 'ADMIN',
+  COUNTY_OFFICIAL = 'COUNTY_OFFICIAL',
+  INVESTOR = 'INVESTOR',
+  USER = 'USER',
+}

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { gql, useMutation } from '@apollo/client'; // Import Apollo hooks
 
@@ -8,8 +8,8 @@ interface User {
   email: string;
   username: string; // Add username
   name?: string; // Keep original name field if still used?
-  firstName?: string; 
-  lastName?: string; 
+  firstName?: string;
+  lastName?: string;
   role?: 'ADMIN' | 'COUNTY_OFFICIAL' | 'INVESTOR' | 'USER'; // Match schema roles
 }
 
@@ -40,6 +40,25 @@ interface AuthContextType {
   error: string | null; // Add error state
 }
 
+// Function to parse JWT token and check if it's expired
+function isTokenExpired(token: string): boolean {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(window.atob(base64));
+
+    // Check if token has expiration
+    if (!payload.exp) return true;
+
+    // exp is in seconds, Date.now() is in milliseconds
+    const expirationTime = payload.exp * 1000;
+    return Date.now() >= expirationTime;
+  } catch (error) {
+    console.error('Error parsing token:', error);
+    return true; // Assume token is expired if we can't parse it
+  }
+}
+
 // Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -55,32 +74,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Check for existing token on mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token && !isTokenExpired(token)) {
+        try {
+          // Decode the token to get the user information
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const payload = JSON.parse(window.atob(base64));
+
+          // Set the user state based on token payload
+          setUser({
+            id: payload.userId,
+            email: payload.email,
+            username: payload.email.split('@')[0], // Fallback if no username in token
+            role: payload.role,
+          });
+        } catch (err) {
+          console.error('Error decoding token:', err);
+          localStorage.removeItem('accessToken');
+        }
+      } else if (token && isTokenExpired(token)) {
+        // Clear the expired token
+        console.log('Token expired, logging out');
+        localStorage.removeItem('accessToken');
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
   // Use the LOGIN_MUTATION
   const [loginMutation, { loading }] = useMutation(LOGIN_MUTATION, {
-    onError: (apolloError) => {
+    onError: apolloError => {
       console.error('Login Mutation Error:', apolloError);
       setError(apolloError.message || 'Login failed. Please try again.');
     },
-    onCompleted: (data) => {
+    onCompleted: data => {
       if (data?.login?.accessToken && data?.login?.user) {
         console.log('Login successful:', data.login.user.email);
         localStorage.setItem('accessToken', data.login.accessToken);
         // Map the returned user data to the frontend User interface
         const loggedInUser: User = {
-            id: data.login.user.id,
-            email: data.login.user.email,
-            username: data.login.user.username,
-            role: data.login.user.role,
-            // Add name/firstName/lastName mapping if necessary
+          id: data.login.user.id,
+          email: data.login.user.email,
+          username: data.login.user.username,
+          role: data.login.user.role,
+          // Add name/firstName/lastName mapping if necessary
         };
         setUser(loggedInUser);
         setError(null); // Clear previous errors
 
         // Navigate based on role
         if (loggedInUser.role === 'ADMIN' || loggedInUser.role === 'COUNTY_OFFICIAL') {
-            navigate('/admin/dashboard');
+          navigate('/admin/dashboard');
         } else {
-            navigate('/dashboard');
+          navigate('/dashboard');
         }
       } else {
         setError('Login failed: Invalid response from server.');
@@ -112,26 +164,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate('/login');
   };
 
-  // Check initial authentication state (e.g., from existing token - can be added later)
-  // For now, relies on login flow
-  const isAuthenticated = !!user;
+  // Check token expiration periodically
+  useEffect(() => {
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token && isTokenExpired(token)) {
+        console.log('Token expired, logging out user');
+        logout();
+      }
+    };
+
+    // Check token expiration every minute
+    const intervalId = setInterval(checkTokenExpiration, 60000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Update memoized context value
-  const contextValue = useMemo(() => ({
-    isAuthenticated,
-    user,
-    selectedCounty,
-    login,
-    logout,
-    loading, // Expose loading state
-    error,   // Expose error state
-  }), [isAuthenticated, user, selectedCounty, loading, error]);
-
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      isAuthenticated: !!user,
+      user,
+      selectedCounty,
+      login,
+      logout,
+      loading, // Expose loading state
+      error, // Expose error state
+    }),
+    [user, selectedCounty, loading, error]
   );
+
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 // Custom hook to use the AuthContext
@@ -141,4 +205,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
