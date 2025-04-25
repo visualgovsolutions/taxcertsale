@@ -79,7 +79,7 @@ type User {
   id: ID!
   username: String!
   email: String!
-  role: UserRole!
+  role: String!
   status: UserStatus!
   kycStatus: String 
   createdAt: String!
