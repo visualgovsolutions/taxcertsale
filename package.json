@@ -5,8 +5,8 @@
   "main": "src/backend/server.js",
   "scripts": {
     "start": "node dist/backend/server.js",
-    "dev:server": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/backend/server.ts",
-    "dev:client": "webpack serve --port 8080",
+    "dev:server": "ts-node-dev -r tsconfig-paths/register --transpile-only src/backend/server.ts",
+    "dev:client": "webpack serve --port 8082",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build:server": "tsc",
     "build:client": "webpack --mode production",

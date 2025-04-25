@@ -1,6 +1,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   mode: 'development',
@@ -13,23 +15,29 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    alias: {
-      '@frontend': path.resolve(__dirname, 'src/frontend'),
-      '@components': path.resolve(__dirname, 'src/frontend/components'),
-      '@pages': path.resolve(__dirname, 'src/frontend/pages'),
-      '@styles': path.resolve(__dirname, 'src/frontend/styles'),
-      '@hooks': path.resolve(__dirname, 'src/frontend/hooks'),
-    },
+    plugins: [
+      new TsconfigPathsPlugin({ 
+        configFile: path.resolve(__dirname, 'tsconfig.json') 
+      })
+    ]
   },
   module: {
     rules: [
       {
         test: /\.(ts|tsx)$/,
-        exclude: /node_modules/,
+        exclude: [
+          /node_modules/,
+          path.resolve(__dirname, "src/backend"),
+          path.resolve(__dirname, "tests"),
+          /.*\.test\.ts$/,
+          /.*\.spec\.ts$/,
+          /.*\/__tests__\/.*/
+        ],
         use: {
           loader: 'ts-loader',
           options: {
-            configFile: path.resolve(__dirname, 'tsconfig.json')
+            configFile: path.resolve(__dirname, 'tsconfig.json'),
+            onlyCompileBundledFiles: true
           }
         },
       },
@@ -43,19 +51,28 @@ module.exports = {
       },
     ],
   },
-  plugins: [new HtmlWebpackPlugin({
-    template: './public/index.html',
-  }), new CopyWebpackPlugin({
-    patterns: [
-      { 
-        from: 'public',
-        to: 'public',
-        globOptions: {
-          ignore: ['**/index.html'], // We don't need to copy index.html as HtmlWebpackPlugin already uses it
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+    }), 
+    new CopyWebpackPlugin({
+      patterns: [
+        { 
+          from: 'public',
+          to: 'public',
+          globOptions: {
+            ignore: ['**/index.html'], // We don't need to copy index.html as HtmlWebpackPlugin already uses it
+          },
         },
-      },
-    ],
-  })],
+      ],
+    }),
+    new webpack.DefinePlugin({
+      'process.env': JSON.stringify({
+        NODE_ENV: process.env.NODE_ENV || 'development',
+        REACT_APP_API_URL: process.env.REACT_APP_API_URL || '',
+      })
+    })
+  ],
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),
@@ -63,14 +80,14 @@ module.exports = {
     historyApiFallback: true, // Important for React Router
     /**
      * CRITICAL PORT CONFIGURATION:
-     * Port 8080: Webpack dev server (frontend)
+     * Port 8082: Webpack dev server (frontend)
      * - Backend API server runs on 8081
-     * - If port 8080 is in use, try 4001 as an alternative
+     * - If port 8082 is in use, try 4001 as an alternative
      * - Port 4000 is reserved for legacy testing
      * 
      * IMPORTANT: Keep this in sync with src/config/index.ts
      */
-    port: 8080,
+    port: 8082,
     hot: true,
     open: true,
     proxy: [

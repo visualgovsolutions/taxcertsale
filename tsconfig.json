@@ -14,16 +14,17 @@
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@src/*": ["src/*"],
-      "@tests/*": ["tests/*"]
-    },
     "allowJs": true,
     "noEmit": false,
     "isolatedModules": true,
     "types": ["jest", "node", "reflect-metadata", "react", "react-dom"]
   },
-  "include": ["src/frontend/**/*"],
-  "exclude": ["node_modules", "dist", "src/backend", "tests"]
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "tests", 
+    "src/backend",
+    "src/tests"
+  ]
 }
