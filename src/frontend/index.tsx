@@ -16,7 +16,7 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <ApolloProvider client={client}>
       <BrowserRouter>
         <AuthProvider>
@@ -24,5 +24,5 @@ root.render(
         </AuthProvider>
       </BrowserRouter>
     </ApolloProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 ); 

@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 
 /**
  * ⚠️ CRITICAL: ADMIN NAVIGATION SIDEBAR ⚠️
@@ -16,8 +16,12 @@ import { useState } from 'react';
  * Never create links without corresponding routes!
  */
 
+interface AdminLayoutProps {
+  children?: ReactNode;
+}
+
 // This layout is specifically for the Admin section, with a Light Theme + Red Accents
-function AdminLayout() {
+function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -157,6 +161,14 @@ function AdminLayout() {
                   </li>
                   <li>
                     <Link
+                      to="/admin/auction-management"
+                      className={`flex items-center ${submenuPadding} py-2 rounded-md ${isActive('/admin/auction-management') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
+                    >
+                      Auction Management
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       to="/admin/batches"
                       className={`flex items-center ${submenuPadding} py-2 rounded-md ${isActive('/admin/batches') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
                     >
@@ -189,6 +201,14 @@ function AdminLayout() {
                       className={`flex items-center ${submenuPadding} py-2 rounded-md ${isActive('/admin/certificates') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
                     >
                       Manage Certificates
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/admin/certificate-management"
+                      className={`flex items-center ${submenuPadding} py-2 rounded-md ${isActive('/admin/certificate-management') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
+                    >
+                      Certificate Management
                     </Link>
                   </li>
                 </ul>
@@ -245,10 +265,20 @@ function AdminLayout() {
 
             <li className="mb-1">
               <Link
+                to="/admin/import-export"
+                className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/import-export') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
+              >
+                <span className={`material-icons mr-3 text-lg ${isActive('/admin/import-export') ? linkActiveText : iconColor}`}>sync_alt</span>
+                Import/Export Data
+              </Link>
+            </li>
+
+            <li className="mb-1">
+              <Link
                 to="/admin/audit-logs"
                 className={`flex items-center px-3 py-2 rounded-md ${isActive('/admin/audit-logs') ? `${linkActiveBg} ${linkActiveText}` : `${textColor} ${linkHoverBg}`}`}
               >
-                <span className={`material-icons mr-3 text-lg ${isActive('/admin/audit-logs') ? linkActiveText : iconColor}`}>history</span>
+                <span className={`material-icons mr-3 text-lg ${isActive('/admin/audit-logs') ? linkActiveText : iconColor}`}>receipt</span>
                 Audit Logs
               </Link>
             </li>
@@ -416,7 +446,7 @@ function AdminLayout() {
 
         {/* Content */}
         <main className="p-6">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

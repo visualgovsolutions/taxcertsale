@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Actual login function using the mutation
   const login = async (email: string, password: string, county?: string | null): Promise<void> => {
-    console.log('Attempting real login with:', email);
+    console.log(`Attempting real login with: ${email}`);
     setError(null); // Clear previous errors
     setSelectedCounty(county || null); // Set county preference early
     try {

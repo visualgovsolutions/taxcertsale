@@ -26,6 +26,9 @@ import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminSystemConfigPage from "./pages/AdminSystemConfigPage";
+import DataImportExportPage from "./pages/admin/DataImportExportPage";
+import AuctionManagementPage from "./pages/admin/AuctionManagementPage";
+import CertificateManagementPage from "./pages/admin/CertificateManagementPage";
 import AdminTestPage from './pages/AdminTestPage';
 
 import { useAuth } from './context/AuthContext';
@@ -117,6 +120,9 @@ function App() {
         <Route path="analytics" element={<AdminAnalyticsPage />} />
         <Route path="notifications" element={<AdminNotificationsPage />} />
         <Route path="system-config" element={<AdminSystemConfigPage />} />
+        <Route path="import-export" element={<DataImportExportPage />} />
+        <Route path="auction-management" element={<AuctionManagementPage />} />
+        <Route path="certificate-management" element={<CertificateManagementPage />} />
         <Route path="test" element={<AdminTestPage />} />
       </Route>
 
