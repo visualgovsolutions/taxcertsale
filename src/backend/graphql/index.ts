@@ -7,7 +7,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
-import resolvers from './resolvers';
+import resolvers from './resolvers/index';
 import config from '../../config/index';
 import { Request, Response } from 'express'; // Import Request and Response for context
 import { verifyAccessToken } from '../utils/jwtUtils';
@@ -22,7 +22,7 @@ export interface GraphQLContext {
     lastName?: string;
   };
   isAuthenticated: boolean;
-  req?: Request;  // Make req optional to fix typescript errors
+  req?: Request; // Make req optional to fix typescript errors
 }
 
 // Define context type (can be expanded later)
@@ -78,16 +78,16 @@ const createApolloMiddleware = (server: ApolloServer<GraphQLContext>) => {
       // Get the auth token from the Authorization header
       const authHeader = req.headers.authorization || '';
       const token = authHeader.split(' ')[1]; // Bearer TOKEN format
-      
+
       // Default context with no authentication
       const context: GraphQLContext = {
         isAuthenticated: false,
         req: {
           ip: req.ip || req.connection.remoteAddress || 'Unknown',
-          headers: req.headers
-        } as any // Cast to Request type to avoid type issues
+          headers: req.headers,
+        } as any, // Cast to Request type to avoid type issues
       };
-      
+
       // If token exists, verify it and add user info to context
       if (token) {
         try {
@@ -100,13 +100,10 @@ const createApolloMiddleware = (server: ApolloServer<GraphQLContext>) => {
           // Resolvers will handle auth requirements
         }
       }
-      
+
       return context;
     },
   });
 };
 
-export {
-  createApolloServer,
-  createApolloMiddleware
-}; 
+export { createApolloServer, createApolloMiddleware };
