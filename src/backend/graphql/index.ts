@@ -61,7 +61,25 @@ const createApolloServer = (httpServer: http.Server): ApolloServer<GraphQLContex
         },
       },
     ],
-    // Consider adding formatError function for custom error formatting later
+    // Add custom error formatting
+    formatError: (error) => {
+      console.error('GraphQL Error:', error);
+      
+      // Don't expose internal server errors to clients in production
+      if (config.server.nodeEnv === 'production') {
+        if (error.extensions?.code === 'INTERNAL_SERVER_ERROR') {
+          return {
+            message: 'Internal server error',
+            extensions: {
+              code: 'INTERNAL_SERVER_ERROR',
+            }
+          };
+        }
+      }
+      
+      // Return the error as is for non-production or non-internal errors
+      return error;
+    },
   });
 
   return server;

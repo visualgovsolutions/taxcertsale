@@ -24,6 +24,8 @@ import {
   HiInformationCircle,
 } from 'react-icons/hi';
 import { gql, useQuery } from '@apollo/client';
+import { useAuth } from '../context/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 // Define the GraphQL query
 // Updated to use activityLogs instead of auditLogs to match the backend resolver
@@ -60,17 +62,18 @@ interface AuditLogUser {
 
 interface AuditLog {
   id: string;
-  user: AuditLogUser; // Use nested structure
+  user: AuditLogUser | null; // User can be null for system-generated logs
   action: string;
   resource: string;
   resourceId: string;
   timestamp: string;
   ipAddress: string;
   details: string;
-  status: 'SUCCESS' | 'FAILURE' | 'WARNING';
+  status: 'SUCCESS' | 'FAILURE' | 'WARNING' | string;
 }
 
 const AdminAuditLogsPage: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -80,6 +83,15 @@ const AdminAuditLogsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const logsPerPage = 10;
+
+  // Redirect if not authenticated or not admin/county official
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user && user.role !== 'ADMIN' && user.role !== 'COUNTY_OFFICIAL') {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
   // Prepare filter object to match the backend schema structure
   const prepareFilter = () => {

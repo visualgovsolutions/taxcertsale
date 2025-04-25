@@ -40,24 +40,22 @@ interface AuthContextType {
   error: string | null; // Add error state
 }
 
-// Function to parse JWT token and check if it's expired
-function isTokenExpired(token: string): boolean {
+// Function to check if a token is expired
+const isTokenExpired = (token: string): boolean => {
   try {
+    // Split token and get payload
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(window.atob(base64));
-
-    // Check if token has expiration
-    if (!payload.exp) return true;
-
-    // exp is in seconds, Date.now() is in milliseconds
-    const expirationTime = payload.exp * 1000;
-    return Date.now() >= expirationTime;
-  } catch (error) {
-    console.error('Error parsing token:', error);
-    return true; // Assume token is expired if we can't parse it
+    
+    // Check expiration time
+    const now = Date.now() / 1000;
+    return payload.exp < now;
+  } catch (err) {
+    console.error('Error checking token expiration:', err);
+    return true; // Assume expired if there's an error
   }
-}
+};
 
 // Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,37 +72,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Check for existing token on mount
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('accessToken');
-      if (token && !isTokenExpired(token)) {
-        try {
-          // Decode the token to get the user information
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const payload = JSON.parse(window.atob(base64));
+  // Check if the token is still valid (not expired)
+  const isTokenValid = (token: string): boolean => {
+    try {
+      // JWT tokens are in three parts separated by dots
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      
+      // Get the payload (middle part) and decode it
+      const payload = JSON.parse(atob(parts[1]));
+      
+      // Check if it has an exp (expiration) claim
+      if (!payload.exp) return false;
+      
+      // Compare with current time (exp is in seconds, Date.now() is in milliseconds)
+      return payload.exp * 1000 > Date.now();
+    } catch (e) {
+      console.error('Error validating token:', e);
+      return false;
+    }
+  };
 
-          // Set the user state based on token payload
-          setUser({
-            id: payload.userId,
-            email: payload.email,
-            username: payload.email.split('@')[0], // Fallback if no username in token
-            role: payload.role,
-          });
-        } catch (err) {
-          console.error('Error decoding token:', err);
+  useEffect(() => {
+    // Try to retrieve the token from localStorage when the component mounts
+    const token = localStorage.getItem('authToken');
+    const userJson = localStorage.getItem('user');
+    
+    if (token && userJson) {
+      // Check if token is still valid before restoring the session
+      if (isTokenValid(token)) {
+        try {
+          const userData = JSON.parse(userJson);
+          setUser(userData);
+          setError(null);
+          setSelectedCounty(null);
+          localStorage.setItem('accessToken', token);
+        } catch (e) {
+          // If there's an error parsing the user data, log out
+          console.error('Error parsing user data, logging out:', e);
           localStorage.removeItem('accessToken');
+          setUser(null);
+          setError('Error parsing user data, logging out');
+          setSelectedCounty(null);
         }
-      } else if (token && isTokenExpired(token)) {
-        // Clear the expired token
-        console.log('Token expired, logging out');
+      } else {
+        // Token expired, log out
+        console.log('Stored token expired, logging out');
         localStorage.removeItem('accessToken');
         setUser(null);
+        setError('Stored token expired, logging out');
+        setSelectedCounty(null);
       }
-    };
-
-    checkAuth();
+    } else {
+      setError('No stored token or user data found');
+    }
   }, []);
 
   // Use the LOGIN_MUTATION

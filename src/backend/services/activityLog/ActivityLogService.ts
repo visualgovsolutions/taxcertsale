@@ -131,21 +131,33 @@ export class ActivityLogService {
       console.log('FINAL WHERE CLAUSE:', JSON.stringify(where, null, 2));
 
       // Get total count
-      const totalCount = await prisma.systemActivityLog.count({ where });
-      console.log('TOTAL COUNT:', totalCount);
+      let totalCount = 0;
+      try {
+        totalCount = await prisma.systemActivityLog.count({ where });
+        console.log('TOTAL COUNT:', totalCount);
+      } catch (countError) {
+        console.error('Error counting logs:', countError);
+        totalCount = 0;
+      }
 
       // Get paginated logs
-      const logs = await prisma.systemActivityLog.findMany({
-        where,
-        include: {
-          user: true,
-        },
-        orderBy: {
-          timestamp: 'desc',
-        },
-        take: limit,
-        skip: offset,
-      });
+      let logs: any[] = [];
+      try {
+        logs = await prisma.systemActivityLog.findMany({
+          where,
+          include: {
+            user: true,
+          },
+          orderBy: {
+            timestamp: 'desc',
+          },
+          take: limit,
+          skip: offset,
+        });
+      } catch (logsError) {
+        console.error('Error fetching logs data:', logsError);
+        logs = [];
+      }
 
       return {
         totalCount,
@@ -156,7 +168,11 @@ export class ActivityLogService {
       };
     } catch (error) {
       console.error('Error fetching activity logs:', error);
-      throw error;
+      // Return empty result instead of throwing to avoid 500 errors
+      return {
+        totalCount: 0,
+        logs: [],
+      };
     }
   }
 

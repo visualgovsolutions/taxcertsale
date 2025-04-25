@@ -14,11 +14,7 @@ import {
   activityLogService,
   ActivityLogInput as ServiceActivityLogInput,
 } from '../services/activityLog/ActivityLogService';
-import { AuthenticationError, ForbiddenError } from 'apollo-server-express';
-import { User, Auction, Certificate } from '@prisma/client';
-import { AuctionService } from '../services/auction/AuctionService';
-import { WebSocketService } from '../services/websocket/WebSocketService';
-import { ApolloError } from 'apollo-server-express';
+import { CertificateService } from '../models/certificate/Certificate';
 
 // Define constants for roles/statuses used in logic
 // Convert UserRole enum to a simple string map for easier checks
@@ -132,6 +128,55 @@ type ActivityLogInput = {
   details?: string;
   userAgent?: string;
   ipAddress?: string;
+};
+
+// Add certificate filter type
+type CertificateFilterInput = {
+  statuses?: string[];
+  countyId?: string;
+  auctionId?: string;
+  fromDate?: string;
+  toDate?: string;
+  minFaceValue?: number;
+  maxFaceValue?: number;
+  searchTerm?: string;
+};
+
+type CertificateArgs = {
+  filter?: CertificateFilterInput;
+  limit?: number;
+  offset?: number;
+  page?: number;
+};
+
+type CreateCertificateInput = {
+  certificateNumber: string;
+  countyId: string;
+  parcelId: string;
+  propertyAddress?: string;
+  ownerName?: string;
+  faceValue: number;
+  auctionDate?: string;
+  status: string;
+  interestRate?: number;
+  batchId?: string;
+};
+
+type UpdateCertificateInput = {
+  certificateNumber?: string;
+  countyId?: string;
+  parcelId?: string;
+  propertyAddress?: string;
+  ownerName?: string;
+  faceValue?: number;
+  auctionDate?: string;
+  status?: string;
+  interestRate?: number;
+  purchaserId?: string;
+  purchaseDate?: string;
+  redemptionDate?: string;
+  expirationDate?: string;
+  batchId?: string;
 };
 
 // Define a basic resolver map
@@ -345,6 +390,9 @@ const resolvers = {
       context: GraphQLContext
     ) => {
       try {
+        // Ensure only Admin or County Official can access logs
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+
         // If page is provided, calculate the correct offset
         const calculatedOffset = page ? (page - 1) * limit : offset;
 
@@ -597,6 +645,149 @@ const resolvers = {
         throw error;
       }
     },
+
+    // Certificate queries
+    certificates: async (_: ResolverParent, args: CertificateArgs, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        const { filter, limit = 20, offset = 0, page = 1 } = args;
+        const skip = page && page > 1 ? (page - 1) * (limit || 20) : offset;
+        
+        // Build filter conditions
+        const where: any = {}; // Use any type to avoid Prisma schema type errors
+        
+        if (filter) {
+          if (filter.statuses && filter.statuses.length > 0) {
+            where.status = { in: filter.statuses };
+          }
+          
+          if (filter.countyId) {
+            where.countyId = filter.countyId;
+          }
+          
+          if (filter.auctionId) {
+            where.auctionId = filter.auctionId;
+          }
+          
+          if (filter.minFaceValue !== undefined || filter.maxFaceValue !== undefined) {
+            where.faceValue = {};
+            
+            if (filter.minFaceValue !== undefined) {
+              where.faceValue.gte = filter.minFaceValue;
+            }
+            
+            if (filter.maxFaceValue !== undefined) {
+              where.faceValue.lte = filter.maxFaceValue;
+            }
+          }
+          
+          if (filter.searchTerm) {
+            where.OR = [
+              { certificateNumber: { contains: filter.searchTerm, mode: 'insensitive' } },
+              { parcelId: { contains: filter.searchTerm, mode: 'insensitive' } },
+              { propertyAddress: { contains: filter.searchTerm, mode: 'insensitive' } },
+              { ownerName: { contains: filter.searchTerm, mode: 'insensitive' } }
+            ];
+          }
+        }
+        
+        // Execute the query
+        const [certificates, totalCount] = await Promise.all([
+          prisma.certificate.findMany({
+            where,
+            take: limit,
+            skip,
+            orderBy: { updatedAt: 'desc' }
+          }),
+          prisma.certificate.count({ where })
+        ]);
+        
+        return {
+          totalCount,
+          certificates
+        };
+      } catch (error) {
+        console.error('Error fetching certificates:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch certificates: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    certificate: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
+        
+        const certificate = await prisma.certificate.findUnique({ where: { id } });
+        
+        if (!certificate) {
+          throw new GraphQLError(`Certificate with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        return certificate;
+      } catch (error) {
+        console.error(`Error fetching certificate ${id}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch certificate: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    certificatesByStatus: async (_: ResolverParent, { status }: StatusArg, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        return await prisma.certificate.findMany({
+          where: { status },
+          orderBy: { updatedAt: 'desc' }
+        });
+      } catch (error) {
+        console.error(`Error fetching certificates by status ${status}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch certificates by status: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    certificatesByCounty: async (_: ResolverParent, { countyId }: { countyId: string }, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        return await prisma.certificate.findMany({
+          where: { countyId },
+          orderBy: { updatedAt: 'desc' }
+        });
+      } catch (error) {
+        console.error(`Error fetching certificates by county ${countyId}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch certificates by county: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    certificatesByAuction: async (_: ResolverParent, { auctionId }: { auctionId: string }, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
+        
+        return await prisma.certificate.findMany({
+          where: { auctionId },
+          orderBy: { updatedAt: 'desc' }
+        });
+      } catch (error) {
+        console.error(`Error fetching certificates by auction ${auctionId}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch certificates by auction: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
   },
   Mutation: {
     // --- Authentication ---
@@ -1097,69 +1288,306 @@ const resolvers = {
     },
     // Create Certificate
     createCertificate: async (
-      _: any,
-      {
-        parcelId,
-        propertyAddress,
-        ownerName,
-        faceValue,
-        interestRate,
-      }: {
-        parcelId: string;
-        propertyAddress: string;
-        ownerName: string;
-        faceValue: number;
-        interestRate: number;
-      },
-      context: any
+      _: ResolverParent,
+      { input }: { input: CreateCertificateInput },
+      context: ExtendedGraphQLContext
     ) => {
       try {
-        // Check authentication
-        if (!context.user) {
-          throw new Error('You must be logged in to create a certificate');
-        }
-
-        // Check authorization (only admins and county users can create certificates)
-        if (!['ADMIN', 'COUNTY'].includes(context.user.role)) {
-          throw new Error('You do not have permission to create certificates');
-        }
-
-        // Create the certificate
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        const now = new Date();
+        
         const certificate = await prisma.certificate.create({
           data: {
-            parcelId,
-            propertyAddress,
-            ownerName,
-            faceValue,
-            interestRate,
-            status: 'AVAILABLE',
-          },
+            certificateNumber: input.certificateNumber,
+            countyId: input.countyId,
+            parcelId: input.parcelId,
+            propertyAddress: input.propertyAddress || null,
+            ownerName: input.ownerName || null,
+            faceValue: input.faceValue,
+            auctionDate: input.auctionDate ? new Date(input.auctionDate) : null,
+            status: input.status,
+            interestRate: input.interestRate || null,
+            batchId: input.batchId || null,
+            createdAt: now,
+            updatedAt: now
+          }
         });
-
-        // Log the activity
-        await prisma.systemActivityLog.create({
-          data: {
-            userId: context.user.id,
-            action: 'CREATE',
-            resource: 'CERTIFICATE',
-            resourceId: certificate.id,
-            status: 'SUCCESS',
-            details: JSON.stringify({
-              parcelId,
-              propertyAddress,
-              ownerName,
-              faceValue,
-              interestRate,
-            }),
-          },
+        
+        // Log activity
+        await activityLogService.logActivity({
+          userId: context.user.id,
+          action: 'CREATE',
+          resource: 'CERTIFICATE',
+          resourceId: certificate.id,
+          status: 'SUCCESS',
+          details: `Certificate ${certificate.certificateNumber} created`
         });
-
+        
         return certificate;
       } catch (error) {
         console.error('Error creating certificate:', error);
-        throw error;
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to create certificate: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
     },
+    updateCertificate: async (
+      _: ResolverParent,
+      { id, input }: { id: string; input: UpdateCertificateInput },
+      context: ExtendedGraphQLContext
+    ) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        // Check if certificate exists
+        const existingCertificate = await prisma.certificate.findUnique({ where: { id } });
+        
+        if (!existingCertificate) {
+          throw new GraphQLError(`Certificate with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        // Update the certificate
+        const certificate = await prisma.certificate.update({
+          where: { id },
+          data: {
+            certificateNumber: input.certificateNumber,
+            countyId: input.countyId,
+            parcelId: input.parcelId,
+            propertyAddress: input.propertyAddress,
+            ownerName: input.ownerName,
+            faceValue: input.faceValue,
+            auctionDate: input.auctionDate ? new Date(input.auctionDate) : undefined,
+            status: input.status,
+            interestRate: input.interestRate,
+            purchaserId: input.purchaserId,
+            purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : undefined,
+            redemptionDate: input.redemptionDate ? new Date(input.redemptionDate) : undefined,
+            expirationDate: input.expirationDate ? new Date(input.expirationDate) : undefined,
+            batchId: input.batchId,
+            updatedAt: new Date()
+          }
+        });
+        
+        // Log activity
+        await activityLogService.logActivity({
+          userId: context.user.id,
+          action: 'UPDATE',
+          resource: 'CERTIFICATE',
+          resourceId: certificate.id,
+          status: 'SUCCESS',
+          details: `Certificate ${certificate.certificateNumber} updated`
+        });
+        
+        return certificate;
+      } catch (error) {
+        console.error(`Error updating certificate ${id}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to update certificate: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    deleteCertificate: async (
+      _: ResolverParent,
+      { id }: IdArg,
+      context: ExtendedGraphQLContext
+    ) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN]);
+        
+        // Check if certificate exists
+        const existingCertificate = await prisma.certificate.findUnique({ where: { id } });
+        
+        if (!existingCertificate) {
+          throw new GraphQLError(`Certificate with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        // Delete the certificate
+        await prisma.certificate.delete({ where: { id } });
+        
+        // Log activity
+        await activityLogService.logActivity({
+          userId: context.user.id,
+          action: 'DELETE',
+          resource: 'CERTIFICATE',
+          resourceId: id,
+          status: 'SUCCESS',
+          details: `Certificate ${existingCertificate.certificateNumber} deleted`
+        });
+        
+        return true;
+      } catch (error) {
+        console.error(`Error deleting certificate ${id}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to delete certificate: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    assignCertificatesToAuction: async (
+      _: ResolverParent,
+      { certificateIds, auctionId }: { certificateIds: string[]; auctionId: string },
+      context: ExtendedGraphQLContext
+    ) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        // Check if auction exists
+        const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
+        
+        if (!auction) {
+          throw new GraphQLError(`Auction with ID ${auctionId} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        // Update certificates
+        const result = await prisma.$transaction(async (prisma) => {
+          const now = new Date();
+          
+          // Update all certificates
+          const updateResult = await prisma.certificate.updateMany({
+            where: { id: { in: certificateIds } },
+            data: {
+              auctionId,
+              status: 'AUCTION_SCHEDULED',
+              auctionDate: auction.auctionDate,
+              updatedAt: now
+            }
+          });
+          
+          // Log activity for each certificate
+          for (const certificateId of certificateIds) {
+            const certificate = await prisma.certificate.findUnique({ where: { id: certificateId } });
+            
+            if (certificate) {
+              await prisma.activityLog.create({
+                data: {
+                  userId: context.user.id,
+                  action: 'ASSIGN_TO_AUCTION',
+                  resource: 'CERTIFICATE',
+                  resourceId: certificateId,
+                  status: 'SUCCESS',
+                  details: `Certificate ${certificate.certificateNumber} assigned to auction ${auction.name}`,
+                  timestamp: now
+                }
+              });
+            }
+          }
+          
+          return updateResult.count;
+        });
+        
+        return result;
+      } catch (error) {
+        console.error('Error assigning certificates to auction:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to assign certificates to auction: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    markCertificateAsRedeemed: async (
+      _: ResolverParent,
+      { id, redemptionDate }: { id: string; redemptionDate: string },
+      context: ExtendedGraphQLContext
+    ) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        // Check if certificate exists
+        const existingCertificate = await prisma.certificate.findUnique({ where: { id } });
+        
+        if (!existingCertificate) {
+          throw new GraphQLError(`Certificate with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        // Update the certificate
+        const certificate = await prisma.certificate.update({
+          where: { id },
+          data: {
+            status: 'REDEEMED',
+            redemptionDate: new Date(redemptionDate),
+            updatedAt: new Date()
+          }
+        });
+        
+        // Log activity
+        await activityLogService.logActivity({
+          userId: context.user.id,
+          action: 'REDEEM',
+          resource: 'CERTIFICATE',
+          resourceId: certificate.id,
+          status: 'SUCCESS',
+          details: `Certificate ${certificate.certificateNumber} marked as redeemed`
+        });
+        
+        return certificate;
+      } catch (error) {
+        console.error(`Error marking certificate ${id} as redeemed:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to mark certificate as redeemed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    
+    updateCertificateStatus: async (
+      _: ResolverParent,
+      { id, status }: { id: string; status: string },
+      context: ExtendedGraphQLContext
+    ) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        
+        // Check if certificate exists
+        const existingCertificate = await prisma.certificate.findUnique({ where: { id } });
+        
+        if (!existingCertificate) {
+          throw new GraphQLError(`Certificate with ID ${id} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        // Update the certificate
+        const certificate = await prisma.certificate.update({
+          where: { id },
+          data: {
+            status,
+            updatedAt: new Date()
+          }
+        });
+        
+        // Log activity
+        await activityLogService.logActivity({
+          userId: context.user.id,
+          action: 'UPDATE_STATUS',
+          resource: 'CERTIFICATE',
+          resourceId: certificate.id,
+          status: 'SUCCESS',
+          details: `Certificate ${certificate.certificateNumber} status updated to ${status}`
+        });
+        
+        return certificate;
+      } catch (error) {
+        console.error(`Error updating certificate ${id} status:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to update certificate status: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
   },
 };
 
