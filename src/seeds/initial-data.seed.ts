@@ -29,7 +29,7 @@ export class InitialDataSeed {
     
     // Create admin user
     const adminUser = new User();
-    adminUser.email = 'admin@example.com';
+    adminUser.email = 'admin@visualgov.com';
     adminUser.firstName = 'Admin';
     adminUser.lastName = 'User';
     adminUser.role = UserRole.ADMIN;
@@ -37,7 +37,7 @@ export class InitialDataSeed {
     
     // Create staff user
     const staffUser = new User();
-    staffUser.email = 'staff@example.com';
+    staffUser.email = 'staff@visualgov.com';
     staffUser.firstName = 'Staff';
     staffUser.lastName = 'User';
     staffUser.role = UserRole.INVESTOR; // Use INVESTOR role for staff for now
@@ -45,7 +45,7 @@ export class InitialDataSeed {
     
     // Create investor user
     const investorUser = new User();
-    investorUser.email = 'investor@example.com';
+    investorUser.email = 'investor@visualgov.com';
     investorUser.firstName = 'Investor';
     investorUser.lastName = 'User';
     investorUser.role = UserRole.INVESTOR; // Use INVESTOR role for investor for now
