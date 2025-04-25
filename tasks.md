@@ -12,7 +12,7 @@
 #### 1. **Admin Dashboard UI**
 
 - [🚧] Admin Dashboard Overview Page
-- [ ] Auction Management Page (list, create, edit, activate, close, cancel)
+- [x] Auction Management Page (list, create, edit, activate, close, cancel)
 - [ ] Certificate Management Page (list, assign, mark as redeemed)
 - [x] User Management Page (list, roles, activity logs)
 - [ ] Admin Navigation (sidebar/header)
@@ -41,7 +41,7 @@
 
 #### 4. **Testing**
 
-- [ ] Add/expand tests for new UI components and flows
+- [x] Add/expand tests for auction management components
 - [ ] E2E tests for login, dashboard, and auction actions
 
 ---
