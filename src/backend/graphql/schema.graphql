@@ -33,6 +33,13 @@ type Query {
   certificatesSummary: CertificatesSummary!
   userActivity(timeRange: String!): [ActivityDataPoint!]!
   redemptionRate(timeRange: String!): [RedemptionRatePoint!]!
+  
+  # Certificate queries
+  certificates(filter: CertificateFilterInput, limit: Int, offset: Int, page: Int): CertificateResponse!
+  certificate(id: ID!): Certificate
+  certificatesByStatus(status: CertificateStatus!): [Certificate!]!
+  certificatesByCounty(countyId: ID!): [Certificate!]!
+  certificatesByAuction(auctionId: ID!): [Certificate!]!
 }
 
 # Base Mutation type (can be added later)
@@ -141,13 +148,14 @@ type Mutation {
   
   # Activity log mutations
   createActivityLog(input: ActivityLogInput!): ActivityLog!
-  createCertificate(
-    parcelId: String!
-    propertyAddress: String!
-    ownerName: String!
-    faceValue: Float!
-    interestRate: Float!
-  ): Certificate!
+  
+  # Certificate mutations
+  createCertificate(input: CreateCertificateInput!): Certificate!
+  updateCertificate(id: ID!, input: UpdateCertificateInput!): Certificate
+  deleteCertificate(id: ID!): Boolean!
+  assignCertificatesToAuction(certificateIds: [ID!]!, auctionId: ID!): Int!
+  markCertificateAsRedeemed(id: ID!, redemptionDate: String!): Certificate!
+  updateCertificateStatus(id: ID!, status: CertificateStatus!): Certificate!
 }
 
 # Management data type
@@ -512,4 +520,82 @@ type ActivityDataPoint {
 type RedemptionRatePoint {
   date: String!
   rate: Float!
+}
+
+# --- Certificate Types ---
+type Certificate {
+  id: ID!
+  certificateNumber: String!
+  countyId: String!
+  parcelId: String!
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float!
+  auctionDate: String
+  status: CertificateStatus!
+  interestRate: Float
+  purchaserId: String
+  purchaseDate: String
+  redemptionDate: String
+  expirationDate: String
+  batchId: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum CertificateStatus {
+  PENDING
+  AVAILABLE
+  AUCTION_SCHEDULED
+  AUCTION_ACTIVE
+  AUCTION_CLOSED
+  SOLD
+  REDEEMED
+  EXPIRED
+}
+
+input CertificateFilterInput {
+  statuses: [CertificateStatus!]
+  countyId: String
+  auctionId: String
+  fromDate: String
+  toDate: String
+  minFaceValue: Float
+  maxFaceValue: Float
+  searchTerm: String
+}
+
+type CertificateResponse {
+  totalCount: Int!
+  certificates: [Certificate!]!
+}
+
+input CreateCertificateInput {
+  certificateNumber: String!
+  countyId: String!
+  parcelId: String!
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float!
+  auctionDate: String
+  status: CertificateStatus!
+  interestRate: Float
+  batchId: String
+}
+
+input UpdateCertificateInput {
+  certificateNumber: String
+  countyId: String
+  parcelId: String
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float
+  auctionDate: String
+  status: CertificateStatus
+  interestRate: Float
+  purchaserId: String
+  purchaseDate: String
+  redemptionDate: String
+  expirationDate: String
+  batchId: String
 } 
