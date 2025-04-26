@@ -1,5 +1,20 @@
 const puppeteer = require('puppeteer');
 
+/**
+ * UI Test Runner 
+ * 
+ * IMPORTANT: Port configuration was updated from 8082 to 8084 to match
+ * the webpack dev server configuration. If you encounter connection errors
+ * like "net::ERR_CONNECTION_REFUSED", check that:
+ * 
+ * 1. The port here matches the webpack server port (8084)
+ * 2. The backend server is running on the correct port (8083)
+ * 3. The UI is properly configured to connect to these ports
+ * 
+ * Also note that authentication issues may occur if the admin user
+ * status is not set to "ACTIVE". Run scripts/activate-admin.ts to fix.
+ */
+
 async function runTests() {
   console.log('Starting UI tests...');
   
@@ -12,13 +27,13 @@ async function runTests() {
   try {
     // Create a single context with all permissions
     const context = browser.defaultBrowserContext();
-    await context.overridePermissions('http://localhost:8082', ['notifications']);
+    await context.overridePermissions('http://localhost:8084', ['notifications']);
     
     const page = await browser.newPage();
     
     // Test 1: Check if home page loads
     console.log('Testing home page load...');
-    await page.goto('http://localhost:8082', { waitUntil: 'networkidle0' });
+    await page.goto('http://localhost:8084', { waitUntil: 'networkidle0' });
     console.log('Home page loaded successfully.');
 
     // Take a screenshot to debug
@@ -111,7 +126,7 @@ async function runTests() {
       } else {
         // Direct navigation as fallback
         console.log('No audit logs link found, navigating directly...');
-        await page.goto('http://localhost:8082/admin/audit-logs', { 
+        await page.goto('http://localhost:8084/admin/audit-logs', { 
           waitUntil: 'networkidle0',
           timeout: 30000 
         });
