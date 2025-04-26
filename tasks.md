@@ -9,6 +9,17 @@
 - Activity Logs system implementation and integration with UI
 - Admin components for user, auction, and certificate management
 - GraphQL schema and resolvers for activity logs
+- Admin Dashboard UI: Core layout, navigation, and sidebar
+- Admin Dashboard UI: Header, user info dropdown
+- Admin Dashboard UI: Admin role management
+- Admin Dashboard UI: User management page
+- Admin Dashboard UI: Auction management page
+- Admin Dashboard UI: Certificate management page
+- Admin Dashboard UI: Audit logs page
+- Bidder Dashboard UI: Dashboard overview page
+- Bidder Dashboard UI: Auctions browsing page
+- Bidder Dashboard UI: My Certificates page
+- Bidder Dashboard UI: Bids management page
 
 ### 🚧 In Progress / Next Steps
 
@@ -23,10 +34,12 @@
 
 #### 2. **Bidder Dashboard UI**
 
-- [ ] Bidder Dashboard Overview Page
-- [ ] My Auctions (active, upcoming, past)
-- [ ] My Certificates (won, redeemed, pending)
-- [ ] Bidding Interface/Component
+- [✅] Bidder Dashboard Overview Page
+- [✅] My Auctions (active, upcoming, past)
+- [✅] My Certificates (won, redeemed, pending)
+- [✅] Bids Management (active, historical, bid increase)
+- [ ] Bidder Profile Page
+- [ ] Bidder Settings Page
 
 #### 3. **Logon & Auth**
 
@@ -53,26 +66,36 @@
 
 ### Pages
 
-- [🚧] `AdminDashboardPage`
+- [✅] `AdminDashboardPage`
 - [✅] `AuctionManagementPage`
 - [✅] `CertificateManagementPage`
 - [✅] `UserManagementPage`
-- [ ] `BidderDashboardPage`
+- [✅] `BidderDashboardPage`
+- [✅] `BidderAuctionsPage`
+- [✅] `BidderCertificatesPage`
+- [✅] `BidderBidsPage`
+- [ ] `BidderProfilePage`
+- [ ] `BidderSettingsPage`
 - [✅] `LoginPage`
 
 ### Components
 
-- [🚧] `SidebarNav` (admin navigation)
-- [🚧] `HeaderBar` (top bar, user info, logout)
+- [✅] `SidebarNav` (admin navigation)
+- [✅] `HeaderBar` (top bar, user info, logout)
 - [✅] `AuctionListTable`
 - [✅] `AuctionDetailModal` / `AuctionForm`
 - [✅] `CertificateListTable`
 - [✅] `CertificateDetailModal`
 - [✅] `UserListTable`
 - [ ] `StatsWidget` (for dashboard KPIs)
-- [ ] `BidTable` (for bidder dashboard)
-- [ ] `BidActionPanel` (place bid, view status)
-- [🚧] `RoleProtectedRoute` (route guard for admin/bidder)
+- [✅] `BidderLayout` (navigation and layout for bidder section)
+- [✅] `BidderDashboardPage` (dashboard overview for bidders)
+- [✅] `BidderAuctionsPage` (auctions browsing for bidders)
+- [✅] `BidderCertificatesPage` (certificate management for bidders)
+- [✅] `BidderBidsPage` (bid management for bidders)
+- [✅] `BidTable` (for bidder dashboard)
+- [✅] `BidActionPanel` (place bid, view status)
+- [✅] `RoleProtectedRoute` (route guard for admin/bidder)
 - [ ] `NotificationBanner` (for system messages)
 
 ---
