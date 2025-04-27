@@ -38,6 +38,8 @@
 - [✅] My Auctions (active, upcoming, past)
 - [✅] My Certificates (won, redeemed, pending)
 - [✅] Bids Management (active, historical, bid increase)
+- [✅] Cross-County Dashboard (unified view of all registered counties)
+- [✅] Place Bids Page (UI for placing bids on certificates)
 - [ ] Bidder Profile Page
 - [ ] Bidder Settings Page
 
@@ -90,6 +92,10 @@
 - [ ] `StatsWidget` (for dashboard KPIs)
 - [✅] `BidderLayout` (navigation and layout for bidder section)
 - [✅] `BidderDashboardPage` (dashboard overview for bidders)
+  - [✅] County portal cards for accessing county-specific auctions
+  - [✅] Summary metrics (registered counties, active bids, certificates, total value)
+  - [✅] Tabbed interface for recent bids, certificates, and upcoming auctions
+  - [✅] Cross-county activity aggregation
 - [✅] `BidderAuctionsPage` (auctions browsing for bidders)
 - [✅] `BidderCertificatesPage` (certificate management for bidders)
 - [✅] `BidderBidsPage` (bid management for bidders)
@@ -126,6 +132,7 @@ Level 4 tasks represent the highest complexity, enterprise-grade features of the
   - Implement inter-county data sharing protocols with privacy controls
   - Build hierarchical administration model for state-level oversight
   - Develop unified reporting across all participating counties
+  - [✅] Create cross-county bidder dashboard for unified experience
 
 - [ ] Build dynamic load distribution system based on auction schedules
 
