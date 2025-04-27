@@ -49,7 +49,7 @@ function DashboardLayout() {
       <div className={`w-64 ${theme.bg} shadow-md border-r ${theme.border}`}>
         <div className={`p-4 border-b ${theme.border}`}>
           <h2 className="text-xl font-semibold text-white">
-             {selectedCounty ? `${selectedCounty} County` : (user?.firstName ? `${user.firstName}'s Dashboard` : 'Dashboard')} 
+             {selectedCounty ? `${selectedCounty} County` : (user?.username ? `${user.username}'s Dashboard` : 'Dashboard')} 
           </h2>
         </div>
         <nav className="mt-4">
@@ -128,7 +128,7 @@ function DashboardLayout() {
                 <span className="material-icons">account_circle</span>
               </button>
               <div className="ml-2">
-                <span className={`text-sm ${theme.text}`}>{user?.name || 'User'}</span>
+                <span className={`text-sm ${theme.text}`}>{user?.username || 'User'}</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
-import React, { createContext, useState, useContext, ReactNode, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { gql, useMutation } from '@apollo/client'; // Import Apollo hooks
+import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useMutation, gql, useApolloClient } from '@apollo/client';
+import { jwtDecode } from 'jwt-decode';
 
 // Define the shape of the user object (matching backend User type, excluding password)
 interface User {
@@ -8,9 +9,16 @@ interface User {
   email: string;
   username: string; // Add username
   name?: string; // Keep original name field if still used?
-  firstName?: string;
-  lastName?: string;
   role?: 'ADMIN' | 'COUNTY_OFFICIAL' | 'INVESTOR' | 'USER'; // Match schema roles
+  status?: string;
+}
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  username: string;
+  role: string;
+  exp: number;
 }
 
 // GraphQL Login Mutation Definition
@@ -23,7 +31,7 @@ const LOGIN_MUTATION = gql`
         email
         username
         role
-        # Include firstName/lastName if needed
+        status
       }
     }
   }
@@ -31,13 +39,14 @@ const LOGIN_MUTATION = gql`
 
 // Define the shape of the context value
 interface AuthContextType {
-  isAuthenticated: boolean;
   user: User | null;
-  selectedCounty: string | null;
-  login: (email: string, password: string, county?: string | null) => Promise<void>;
+  loading: boolean;
+  error: Error | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  loading: boolean; // Add loading state
-  error: string | null; // Add error state
+  isAuthenticated: boolean;
+  selectedCounty: string | null;
+  checkAuthState: () => Promise<boolean>;
 }
 
 // Function to check if a token is expired
@@ -62,158 +71,145 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Define the props for the AuthProvider
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 // Create the AuthProvider component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedCounty, setSelectedCounty] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const client = useApolloClient();
 
-  // Check if the token is still valid (not expired)
-  const isTokenValid = (token: string): boolean => {
+  // Login mutation
+  const [loginMutation] = useMutation(LOGIN_MUTATION);
+
+  // Function to check if a token is valid
+  const isTokenValid = useCallback((token: string) => {
     try {
-      // JWT tokens are in three parts separated by dots
-      const parts = token.split('.');
-      if (parts.length !== 3) return false;
-      
-      // Get the payload (middle part) and decode it
-      const payload = JSON.parse(atob(parts[1]));
-      
-      // Check if it has an exp (expiration) claim
-      if (!payload.exp) return false;
-      
-      // Compare with current time (exp is in seconds, Date.now() is in milliseconds)
-      return payload.exp * 1000 > Date.now();
-    } catch (e) {
-      console.error('Error validating token:', e);
+      const decodedToken = jwtDecode<JwtPayload>(token);
+      const currentTime = Date.now() / 1000;
+      return decodedToken.exp > currentTime;
+    } catch (error) {
+      console.error('Error decoding token:', error);
       return false;
-    }
-  };
-
-  useEffect(() => {
-    // Try to retrieve the token from localStorage when the component mounts
-    const token = localStorage.getItem('authToken');
-    const userJson = localStorage.getItem('user');
-    
-    if (token && userJson) {
-      // Check if token is still valid before restoring the session
-      if (isTokenValid(token)) {
-        try {
-          const userData = JSON.parse(userJson);
-          setUser(userData);
-          setError(null);
-          setSelectedCounty(null);
-          localStorage.setItem('accessToken', token);
-        } catch (e) {
-          // If there's an error parsing the user data, log out
-          console.error('Error parsing user data, logging out:', e);
-          localStorage.removeItem('accessToken');
-          setUser(null);
-          setError('Error parsing user data, logging out');
-          setSelectedCounty(null);
-        }
-      } else {
-        // Token expired, log out
-        console.log('Stored token expired, logging out');
-        localStorage.removeItem('accessToken');
-        setUser(null);
-        setError('Stored token expired, logging out');
-        setSelectedCounty(null);
-      }
-    } else {
-      setError('No stored token or user data found');
     }
   }, []);
 
-  // Use the LOGIN_MUTATION
-  const [loginMutation, { loading }] = useMutation(LOGIN_MUTATION, {
-    onError: apolloError => {
-      console.error('Login Mutation Error:', apolloError);
-      setError(apolloError.message || 'Login failed. Please try again.');
-    },
-    onCompleted: data => {
-      if (data?.login?.accessToken && data?.login?.user) {
-        console.log('Login successful:', data.login.user.email);
-        localStorage.setItem('accessToken', data.login.accessToken);
-        // Map the returned user data to the frontend User interface
-        const loggedInUser: User = {
-          id: data.login.user.id,
-          email: data.login.user.email,
-          username: data.login.user.username,
-          role: data.login.user.role,
-          // Add name/firstName/lastName mapping if necessary
-        };
-        setUser(loggedInUser);
-        setError(null); // Clear previous errors
-
-        // Navigate based on role
-        if (loggedInUser.role === 'ADMIN' || loggedInUser.role === 'COUNTY_OFFICIAL') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        setError('Login failed: Invalid response from server.');
-      }
-    },
-  });
-
-  // Actual login function using the mutation
-  const login = async (email: string, password: string, county?: string | null): Promise<void> => {
-    console.log(`Attempting real login with: ${email}`);
-    setError(null); // Clear previous errors
-    setSelectedCounty(county || null); // Set county preference early
+  // Function to check authentication state - can be called manually
+  const checkAuthState = useCallback(async (): Promise<boolean> => {
     try {
-      await loginMutation({ variables: { email, password } });
-      // Navigation is handled in onCompleted
-    } catch (err) {
-      // Error handling is done in onError, but catch block prevents unhandled promise rejection
-      console.log('Caught mutation error, but handled by onError.');
+      const token = localStorage.getItem('token');
+      
+      if (token && isTokenValid(token)) {
+        // Token exists and is valid
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+          return true;
+        }
+      } else if (token) {
+        // Token exists but is invalid, clear it
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to check auth state:', error);
+      return false;
     }
-  };
+  }, [isTokenValid]);
 
-  // Logout function clears token and state
-  const logout = () => {
-    console.log('Logging out');
-    localStorage.removeItem('accessToken');
-    setUser(null);
-    setSelectedCounty(null);
-    setError(null);
-    navigate('/login');
-  };
-
-  // Check token expiration periodically
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    const checkTokenExpiration = () => {
-      const token = localStorage.getItem('accessToken');
-      if (token && isTokenExpired(token)) {
-        console.log('Token expired, logging out user');
-        logout();
+    const initializeAuth = async () => {
+      setLoading(true);
+      try {
+        await checkAuthState();
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        setError(error instanceof Error ? error : new Error('Unknown error'));
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Check token expiration every minute
-    const intervalId = setInterval(checkTokenExpiration, 60000);
+    initializeAuth();
+  }, [checkAuthState]);
 
-    // Clean up interval on unmount
-    return () => clearInterval(intervalId);
-  }, []);
+  // Also check auth on location changes (route navigation)
+  useEffect(() => {
+    if (!loading) {
+      checkAuthState();
+    }
+  }, [location.pathname, checkAuthState, loading]);
 
-  // Update memoized context value
+  // Login function
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await loginMutation({ variables: { email, password } });
+      const { accessToken, user } = data.login;
+      
+      // Save token in localStorage
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Update state
+      setUser(user);
+      setIsAuthenticated(true);
+      
+      // Redirect based on user role
+      if (user.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (user.role === 'COUNTY_OFFICIAL') {
+        navigate('/county/dashboard');
+      } else {
+        // For bidders, check if there's a redirect path
+        const from = location.state?.from?.pathname || '/bidder/auctions';
+        navigate(from);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error instanceof Error ? error : new Error('Failed to login'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout function
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+    // Reset Apollo store
+    client.resetStore();
+    navigate('/login');
+  }, [client, navigate]);
+
+  // Memoize the context value
   const contextValue = useMemo(
     () => ({
-      isAuthenticated: !!user,
       user,
-      selectedCounty,
+      loading,
+      error,
       login,
       logout,
-      loading, // Expose loading state
-      error, // Expose error state
+      isAuthenticated,
+      selectedCounty,
+      checkAuthState
     }),
-    [user, selectedCounty, loading, error]
+    [user, loading, error, login, logout, isAuthenticated, selectedCounty, checkAuthState]
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
@@ -226,4 +222,10 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Add this to inject the token into all GraphQL requests
+export const authLink = () => {
+  const token = localStorage.getItem('token');
+  return token ? `Bearer ${token}` : '';
 };

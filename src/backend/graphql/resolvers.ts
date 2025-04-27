@@ -15,6 +15,9 @@ import {
   ActivityLogInput as ServiceActivityLogInput,
 } from '../services/activityLog/ActivityLogService';
 import { CertificateService } from '../models/certificate/Certificate';
+import { AuctionStatus } from '../../models/enums/auction-status.enum';
+import { W9FormRepository } from '../../repositories/w9form.repository';
+import { certificateResolvers } from './resolvers/certificate.resolver';
 
 // Define constants for roles/statuses used in logic
 // Convert UserRole enum to a simple string map for easier checks
@@ -24,12 +27,12 @@ const UserRoles = {
   INVESTOR: 'INVESTOR', // Add other roles as needed
   USER: 'USER', // Added USER role
 };
-// Convert AuctionStatus enum to a simple string map
+// Using AuctionStatus enum values for consistency
 const AuctionStatuses = {
-  UPCOMING: 'upcoming',
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
+  UPCOMING: AuctionStatus.UPCOMING,
+  ACTIVE: AuctionStatus.ACTIVE,
+  COMPLETED: AuctionStatus.COMPLETED,
+  CANCELLED: AuctionStatus.CANCELLED,
 };
 
 const UserStatuses = {
@@ -48,7 +51,7 @@ export const setSocketServer = (socketServer: Server) => {
 };
 
 // Helper function to check if user is authenticated and has required roles
-const checkAuth = (context: GraphQLContext, roles: string[]) => {
+const checkAuth = (context: GraphQLContext, roles: string[] = []) => {
   if (!context.isAuthenticated || !context.user) {
     throw new GraphQLError('User not authenticated', {
       extensions: { code: 'UNAUTHENTICATED' },
@@ -68,6 +71,9 @@ const checkAuth = (context: GraphQLContext, roles: string[]) => {
 
 // Use the auctionRepository instance
 const auctionRepositoryInstance = auctionRepository;
+
+// Create an instance of the W9FormRepository
+const w9FormRepository = new W9FormRepository(prisma);
 
 // Define resolver parameter types
 type ResolverParent = unknown;
@@ -193,7 +199,11 @@ const resolvers = {
     },
     auction: async (_: ResolverParent, { id }: IdArg, _context: GraphQLContext) => {
       // Add auth check if needed
-      return await auctionRepositoryInstance.findById(id);
+      // Include county details for branding
+      return await prisma.auction.findUnique({
+        where: { id },
+        include: { county: true }, 
+      });
     },
     auctionsByCounty: async (
       _: ResolverParent,
@@ -268,8 +278,8 @@ const resolvers = {
     // --- County Queries ---
     counties: async (_: ResolverParent, _args: Record<string, never>, context: GraphQLContext) => {
       try {
-        // Public or specific roles? Assuming Admin/County Official for now
-        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        // Allow all authenticated users to access counties list, including investors
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
         return await prisma.county.findMany();
       } catch (error) {
         console.error('Error fetching counties:', error);
@@ -616,40 +626,10 @@ const resolvers = {
       }
     },
 
-    activeAuctions: async (_: any, __: any, context: any) => {
-      try {
-        const auctions = await prisma.auction.findMany({
-          where: {
-            status: 'ACTIVE',
-          },
-        });
-
-        return auctions;
-      } catch (error) {
-        console.error('Error fetching active auctions:', error);
-        throw error;
-      }
-    },
-
-    upcomingAuctions: async (_: any, __: any, context: any) => {
-      try {
-        const auctions = await prisma.auction.findMany({
-          where: {
-            status: 'UPCOMING',
-          },
-        });
-
-        return auctions;
-      } catch (error) {
-        console.error('Error fetching upcoming auctions:', error);
-        throw error;
-      }
-    },
-
     // Certificate queries
     certificates: async (_: ResolverParent, args: CertificateArgs, context: GraphQLContext) => {
       try {
-        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
         
         const { filter, limit = 20, offset = 0, page = 1 } = args;
         const skip = page && page > 1 ? (page - 1) * (limit || 20) : offset;
@@ -698,7 +678,10 @@ const resolvers = {
             where,
             take: limit,
             skip,
-            orderBy: { updatedAt: 'desc' }
+            orderBy: { updatedAt: 'desc' },
+            include: {
+              property: true
+            }
           }),
           prisma.certificate.count({ where })
         ]);
@@ -787,7 +770,180 @@ const resolvers = {
           `Failed to fetch certificates by auction: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
-    }
+    },
+
+    // Bidder-specific queries
+    myBids: async (_: any, __: any, context: GraphQLContext) => {
+      try {
+        // Require the INVESTOR role
+        checkAuth(context, [UserRoles.INVESTOR]);
+        const userId = context.user?.userId;
+        if (!userId) {
+          throw new GraphQLError('User not authenticated', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+
+        const bids = await prisma.bid.findMany({
+          where: { userId },
+          include: {
+            certificate: {
+              include: {
+                auction: {
+                  include: {
+                    county: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { bidTime: 'desc' },
+        });
+
+        return bids;
+      } catch (error) {
+        console.error('Error fetching user bids:', error);
+        throw new GraphQLError('Failed to fetch bids', {
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            originalError: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
+    },
+    myCertificates: async (_: any, __: any, context: GraphQLContext) => {
+      try {
+        checkAuth(context);
+        const userId = context.user?.userId;
+        if (!userId) {
+          throw new GraphQLError('User not authenticated', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+
+        const certificates = await prisma.certificate.findMany({
+          where: { buyerId: userId },
+          include: {
+            auction: {
+              include: {
+                county: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+
+        return certificates;
+      } catch (error) {
+        console.error('Error fetching user certificates:', error);
+        throw new GraphQLError('Failed to fetch certificates', {
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            originalError: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
+    },
+    registeredCounties: async (_: any, __: any, context: GraphQLContext) => {
+      try {
+        checkAuth(context);
+        const userId = context.user?.userId;
+        if (!userId) {
+          throw new GraphQLError('User not authenticated', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+
+        // Get counties the user is registered with through a join table query
+        // Assuming there's a bidderCountyRegistration table or similar
+        const userCountiesData = await prisma.$queryRaw`
+          SELECT c.*, 
+            (SELECT COUNT(*) FROM "Auction" a WHERE a."countyId" = c.id AND a.status = ${AuctionStatuses.ACTIVE}) as "activeAuctions",
+            (SELECT COUNT(*) FROM "Auction" a WHERE a."countyId" = c.id AND a.status = ${AuctionStatuses.UPCOMING}) as "upcomingAuctions"
+          FROM "County" c
+          JOIN "BidderCountyRegistration" bcr ON c.id = bcr."countyId"
+          WHERE bcr."bidderId" = ${userId} AND bcr.status = 'APPROVED'
+        `;
+        
+        return userCountiesData;
+      } catch (error) {
+        console.error('Error fetching registered counties:', error);
+        throw new GraphQLError('Failed to fetch registered counties', {
+          extensions: {
+            code: 'INTERNAL_SERVER_ERROR',
+            originalError: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
+    },
+
+    // --- W9 Form Queries ---
+    myW9Forms: async (_: ResolverParent, _args: Record<string, never>, context: GraphQLContext) => {
+      try {
+        const { user } = context;
+        if (!user) {
+          throw new GraphQLError('Authentication required', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+        
+        // Return empty array instead of null to satisfy non-nullable return type
+        const forms = await w9FormRepository.findByUserId(user.userId);
+        return forms || [];
+      } catch (error) {
+        console.error('Error fetching user W9 forms:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch W9 forms: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    w9FormsByCounty: async (_: ResolverParent, { countyId }: CountyIdArg, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        return await w9FormRepository.findByCountyId(countyId);
+      } catch (error) {
+        console.error(`Error fetching W9 forms for county ${countyId}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch W9 forms: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    w9FormStatus: async (_: ResolverParent, { countyId }: CountyIdArg, context: GraphQLContext) => {
+      try {
+        const { user } = context;
+        if (!user) {
+          throw new GraphQLError('Authentication required', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+
+        const form = await w9FormRepository.findByUserAndCounty(user.userId, countyId);
+        return form ? form.status : 'NONE';
+      } catch (error) {
+        console.error(`Error fetching W9 form status for county ${countyId}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch W9 form status: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    pendingW9Forms: async (_: ResolverParent, { countyId }: { countyId?: string }, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        return await w9FormRepository.findPending(countyId);
+      } catch (error) {
+        console.error('Error fetching pending W9 forms:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to fetch pending W9 forms: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
   },
   Mutation: {
     // --- Authentication ---
@@ -796,70 +952,143 @@ const resolvers = {
       { email, password }: { email: string; password: string },
       context: GraphQLContext
     ) => {
+      console.log(`Login attempt with email: ${email}`);
+      
       try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        // Find user by email
+        const user = await prisma.user.findUnique({ 
+          where: { email },
+          select: {
+            id: true,
+            username: true,
+            password: true,
+            email: true,
+            role: true,
+            status: true,
+            kycStatus: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+        
+        console.log(`User lookup result: ${user ? 'Found' : 'Not found'}`);
+        
+        // Handle user not found case
         if (!user) {
-          // Log failed login attempt directly
+          console.log(`User not found for email: ${email}`);
+          
+          // For security, still log the attempt
           await prisma.systemActivityLog.create({
             data: {
               action: 'LOGIN_ATTEMPT',
-              resource: 'System',
+              resource: 'AUTH',
               status: 'ERROR',
-              details: `Failed login attempt for email: ${email} - User not found`,
+              details: `Failed login: User not found for email ${email}`,
+              ipAddress: context.req?.ip || 'Unknown',
               userAgent: context.req?.headers['user-agent'] || 'Unknown',
-              ipAddress: String(context.req?.ip || 'Unknown'),
-            },
-          });
-          throw new GraphQLError('Invalid credentials', {
-            extensions: { code: 'UNAUTHENTICATED' },
+            }
+          }).catch(err => console.error('Error logging failed login:', err));
+          
+          // Always throw a consistent error message to prevent email enumeration
+          throw new GraphQLError('Invalid email or password', {
+            extensions: { code: 'UNAUTHENTICATED' }
           });
         }
-
+        
+        // Check password
+        console.log('Comparing supplied password with stored hash');
         const valid = await comparePassword(password, user.password);
+        console.log(`Password validation result: ${valid ? 'Valid' : 'Invalid'}`);
+        
         if (!valid) {
-          // Log failed login attempt directly
+          console.log(`Invalid password for user ${user.id}`);
+          
+          // Log the failed attempt
           await prisma.systemActivityLog.create({
             data: {
               action: 'LOGIN_ATTEMPT',
-              resource: 'System',
+              resource: 'AUTH',
               status: 'ERROR',
-              details: `Failed login attempt for user: ${user.email} - Invalid password`,
+              details: `Failed login: Invalid password for user ${user.email}`,
+              ipAddress: context.req?.ip || 'Unknown',
               userAgent: context.req?.headers['user-agent'] || 'Unknown',
-              ipAddress: String(context.req?.ip || 'Unknown'),
               userId: user.id,
-            },
-          });
-          throw new GraphQLError('Invalid credentials', {
-            extensions: { code: 'UNAUTHENTICATED' },
+            }
+          }).catch(err => console.error('Error logging failed login:', err));
+          
+          // Always throw a consistent error message
+          throw new GraphQLError('Invalid email or password', {
+            extensions: { code: 'UNAUTHENTICATED' }
           });
         }
-
+        
+        // Check if user is active
+        if (user.status !== UserStatuses.ACTIVE) {
+          console.log(`Login attempt for inactive account: ${user.id}, status: ${user.status}`);
+          
+          // Log the attempt
+          await prisma.systemActivityLog.create({
+            data: {
+              action: 'LOGIN_ATTEMPT',
+              resource: 'AUTH',
+              status: 'ERROR',
+              details: `Failed login: Account not active (${user.status}) for user ${user.email}`,
+              ipAddress: context.req?.ip || 'Unknown',
+              userAgent: context.req?.headers['user-agent'] || 'Unknown',
+              userId: user.id,
+            }
+          }).catch(err => console.error('Error logging failed login:', err));
+          
+          throw new GraphQLError('Your account is not active. Please contact support.', {
+            extensions: { code: 'ACCOUNT_INACTIVE' }
+          });
+        }
+        
+        // Generate access token
+        console.log(`Generating token for user ${user.id}`);
         const accessToken = generateAccessToken({
           userId: user.id,
           email: user.email,
-          role: user.role as any,
+          role: user.role,
         });
-
-        // Log successful login directly
+        
+        // Log successful login
         await prisma.systemActivityLog.create({
           data: {
             action: 'LOGIN',
-            resource: 'System',
+            resource: 'AUTH',
             status: 'SUCCESS',
-            details: `User logged in successfully: ${user.email}`,
+            details: `Successful login for user ${user.email}`,
+            ipAddress: context.req?.ip || 'Unknown',
             userAgent: context.req?.headers['user-agent'] || 'Unknown',
-            ipAddress: String(context.req?.ip || 'Unknown'),
             userId: user.id,
-          },
-        });
-
-        // Exclude password from returned user object
-        const { password: _pw, ...safeUser } = user;
-        return { accessToken, user: safeUser };
+          }
+        }).catch(err => console.error('Error logging successful login:', err));
+        
+        // Remove password from user object
+        const { password: _, ...userWithoutPassword } = user;
+        
+        console.log(`Login successful for user ${user.id}`);
+        return {
+          accessToken,
+          user: userWithoutPassword
+        };
       } catch (error) {
+        // Log the error
         console.error('Login error:', error);
-        if (error instanceof GraphQLError) throw error;
-        throw new GraphQLError('Login failed');
+        
+        // If it's already a GraphQL error, rethrow it
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
+        // Otherwise, wrap it in a user-friendly error
+        throw new GraphQLError('Authentication failed. Please try again later.', {
+          extensions: { 
+            code: 'AUTHENTICATION_ERROR',
+            originalError: error instanceof Error ? error.message : String(error)
+          }
+        });
       }
     },
     // --- Auction State Transition Mutations ---
@@ -1587,7 +1816,113 @@ const resolvers = {
           `Failed to update certificate status: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
       }
-    }
+    },
+    async createBid(_: any, { certificateId, interestRate }: { certificateId: string, interestRate: number }, context: GraphQLContext) {
+      try {
+        // Check if user is authenticated
+        if (!context.isAuthenticated || !context.user) {
+          throw new GraphQLError('User not authenticated', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+        
+        // Get the certificate to check if it exists and get the auction ID
+        const certificate = await prisma.certificate.findUnique({
+          where: { id: certificateId },
+        });
+        
+        if (!certificate) {
+          throw new GraphQLError(`Certificate with ID ${certificateId} not found`, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        
+        if (!certificate.auctionId) {
+          throw new GraphQLError(`Certificate is not associated with any auction`, {
+            extensions: { code: 'BAD_REQUEST' },
+          });
+        }
+        
+        // Create the bid
+        const bid = await prisma.bid.create({
+          data: {
+            certificateId,
+            auctionId: certificate.auctionId,
+            userId: context.user.userId,
+            interestRate: interestRate,
+            bidTime: new Date().toISOString(),
+            bidType: 'MANUAL',
+            status: 'PENDING',
+            isWinningBid: false,
+          },
+        });
+        
+        return bid;
+      } catch (error) {
+        console.error('Error creating bid:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to create bid: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+    // --- W9 Form Mutations ---
+    submitW9Form: async (_: ResolverParent, { input }: { input: any }, context: GraphQLContext) => {
+      try {
+        const { user } = context;
+        if (!user) {
+          throw new GraphQLError('Authentication required', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+        
+        // Create the W9 form with the user ID
+        const w9Form = await w9FormRepository.create({
+          userId: user.userId,
+          ...input
+        });
+        
+        return w9Form;
+      } catch (error) {
+        console.error('Error submitting W9 form:', error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to submit W9 form: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    approveW9Form: async (_: ResolverParent, { id }: IdArg, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        const { user } = context;
+        if (!user) {
+          throw new GraphQLError('Authentication required', {
+            extensions: { code: 'UNAUTHENTICATED' },
+          });
+        }
+        return await w9FormRepository.approve(id, user.userId);
+      } catch (error) {
+        console.error(`Error approving W9 form ${id}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to approve W9 form: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    rejectW9Form: async (_: ResolverParent, { id, reason }: { id: string; reason: string }, context: GraphQLContext) => {
+      try {
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        return await w9FormRepository.reject(id, reason);
+      } catch (error) {
+        console.error(`Error rejecting W9 form ${id}:`, error);
+        if (error instanceof GraphQLError) throw error;
+        throw new GraphQLError(
+          `Failed to reject W9 form: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
   },
 };
 

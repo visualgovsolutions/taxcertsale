@@ -222,39 +222,54 @@ const AdminSettingsPage: React.FC = () => {
             <div>
               <h2 className="text-xl font-medium mb-4">User Interface Settings</h2>
               
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Theme</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>Default</option>
-                  <option>Dark Mode</option>
-                  <option>High Contrast</option>
-                </select>
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3">Bidder Portal Settings</h3>
+                
+                <div className="mb-4">
+                  <label className="flex items-center text-gray-700">
+                    <input 
+                      type="checkbox" 
+                      className="mr-2" 
+                      defaultChecked={false}
+                    />
+                    Enable Sidebar Navigation for Bidders
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1 ml-6">
+                    When enabled, bidders will see both top navigation and sidebar navigation.
+                    When disabled, bidders will only see the top navigation bar.
+                  </p>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2">Bidder Portal Theme</label>
+                  <select className="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="auto">Auto (System Default)</option>
+                  </select>
+                </div>
               </div>
               
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Items Per Page</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>10</option>
-                  <option>25</option>
-                  <option>50</option>
-                  <option>100</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Date Format</label>
-                <select className="w-full p-2 border border-gray-300 rounded-md">
-                  <option>MM/DD/YYYY</option>
-                  <option>DD/MM/YYYY</option>
-                  <option>YYYY-MM-DD</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="flex items-center text-gray-700">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  Show Welcome Message
-                </label>
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3">Admin Portal Settings</h3>
+                
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2">Admin Portal Theme</label>
+                  <select className="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="auto">Auto (System Default)</option>
+                  </select>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2">Default Dashboard View</label>
+                  <select className="w-full p-2 border border-gray-300 rounded-md">
+                    <option value="summary">Summary Cards</option>
+                    <option value="analytics">Analytics Graphs</option>
+                    <option value="activity">Recent Activity</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}

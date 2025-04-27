@@ -1,7 +1,9 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
 import Layout from './components/Layout';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import AdminLayout from './components/admin/AdminLayout';
+import CountyAdminLayout from './components/layouts/CountyAdminLayout';
 import LoginPage from './pages/LoginPage';
 import NotFound from './pages/NotFound';
 import DashboardPage from './pages/DashboardPage';
@@ -31,7 +33,27 @@ import AuctionManagementPage from './pages/admin/AuctionManagementPage';
 import CertificateManagementPage from './pages/admin/CertificateManagementPage';
 import AdminTestPage from './pages/AdminTestPage';
 
+// County Admin pages
+import CountyAdminDashboardPage from './pages/county/CountyAdminDashboardPage';
+import BidderApprovalsPage from './pages/county/BidderApprovalsPage';
+import W9ApprovalsPage from './pages/county/W9ApprovalsPage';
+
 import { useAuth } from './context/AuthContext';
+import BidderLayout from './components/layouts/BidderLayout';
+import BidderDashboardPage from './pages/BidderDashboardPage';
+// Import bidder page components
+import BidderAuctionsPage from './pages/bidder/BidderAuctionsPage';
+import BidderCertificatesPage from './pages/bidder/BidderCertificatesPage';
+import BidderBidsPage from './pages/bidder/BidderBidsPage';
+import BidderCertificateDetailPage from './pages/bidder/BidderCertificateDetailPage';
+import CountyAuctionPage from './pages/bidder/CountyAuctionPage';
+import BidderLandingPage from './pages/bidder/BidderLandingPage';
+import W9FormPage from './pages/bidder/W9FormPage';
+import UploadBidsPage from './pages/bidder/UploadBidsPage';
+import DepositPage from './pages/bidder/DepositPage';
+import ParcelSearchPage from './pages/bidder/ParcelSearchPage';
+import PlaceBidsPage from './pages/bidder/PlaceBidsPage';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 /**
  * ⚠️ CRITICAL PATH: MAIN ROUTER DEFINITION ⚠️
@@ -48,39 +70,6 @@ import { useAuth } from './context/AuthContext';
  * 1. This file (App.tsx) - The actual route definitions
  * 2. components/admin/AdminLayout.tsx - Sidebar navigation links
  */
-
-// Updated Protected route component to use AuthContext
-const ProtectedRoute = ({
-  children,
-  requiredRoles = [],
-}: {
-  children: JSX.Element;
-  requiredRoles?: string[];
-}) => {
-  const { isAuthenticated, user } = useAuth(); // Get auth state from context
-
-  if (!isAuthenticated) {
-    // Redirect them to the /login page, but save the current location they were
-    // trying to go to when they were redirected. This allows us to send them
-    // along to that page after they login, which is a nicer user experience
-    // than dropping them off on the home page.
-    return <Navigate to="/login" replace />;
-  }
-
-  // Check for required roles if specified
-  if (requiredRoles.length > 0 && user?.role) {
-    if (!requiredRoles.includes(user.role)) {
-      // User doesn't have the required role - redirect to appropriate page
-      if (user.role === 'ADMIN' || user.role === 'COUNTY_OFFICIAL') {
-        return <Navigate to="/admin/dashboard" replace />;
-      } else {
-        return <Navigate to="/dashboard" replace />;
-      }
-    }
-  }
-
-  return children;
-};
 
 function App() {
   return (
@@ -114,11 +103,67 @@ function App() {
         {/* Add more dashboard routes as needed */}
       </Route>
 
+      {/* Bidder routes */}
+      <Route
+        path="/bidder"
+        element={
+          <ProtectedRoute requiredRole="INVESTOR">
+            <BidderLayout>
+              <Outlet />
+            </BidderLayout>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<BidderLandingPage />} />
+        <Route path="dashboard" element={<BidderDashboardPage />} />
+        <Route path="auctions" element={<BidderAuctionsPage />} />
+        <Route path="county-auction/:auctionId" element={<CountyAuctionPage />} />
+        <Route path="county-auction/:auctionId/w9-form" element={<W9FormPage />} />
+        <Route path="county-auction/:auctionId/deposit" element={<DepositPage />} />
+        <Route path="county-auction/:auctionId/upload-bids" element={<UploadBidsPage />} />
+        <Route path="county-auction/:auctionId/search" element={<ParcelSearchPage />} />
+        <Route path="county-auction/:auctionId/place-bids" element={<PlaceBidsPage />} />
+        <Route path="county-auction/:auctionId/my-bids" element={<BidderBidsPage />} />
+        <Route path="certificates" element={<BidderCertificatesPage />} />
+        <Route path="certificates/:certificateId" element={<BidderCertificateDetailPage />} />
+        <Route path="certificates/:certificateId/bid" element={<div>Place Bid Page</div>} />
+        <Route path="bids" element={<BidderBidsPage />} />
+        <Route path="profile" element={<div>Bidder Profile</div>} />
+        <Route path="settings" element={<div>Bidder Settings</div>} />
+        {/* New bidder routes matching navigation menu */}
+        <Route path="auction-summary" element={<BidderLandingPage />} />
+        <Route path="search" element={<div>Search Page</div>} />
+        <Route path="place-bids" element={<Navigate to="/bidder/auctions" replace />} />
+        <Route path="my-bids" element={<BidderBidsPage />} />
+        <Route path="change-password" element={<div>Change Password Page</div>} />
+        <Route path="support" element={<div>Support Page</div>} />
+      </Route>
+
+      {/* County Admin routes */}
+      <Route
+        path="/county-admin"
+        element={
+          <ProtectedRoute requiredRole="COUNTY_OFFICIAL">
+            <CountyAdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<CountyAdminDashboardPage />} />
+        <Route path="bidder-approvals" element={<BidderApprovalsPage />} />
+        <Route path="w9-approvals" element={<W9ApprovalsPage />} />
+        <Route path="certificates" element={<div>County Certificates Page</div>} />
+        <Route path="county-info" element={<div>County Information Page</div>} />
+        <Route path="settings" element={<div>County Settings Page</div>} />
+        <Route path="analytics" element={<div>County Analytics Page</div>} />
+        <Route path="investors" element={<div>County Investors Page</div>} />
+      </Route>
+
       {/* Admin dashboard routes */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requiredRoles={['ADMIN', 'COUNTY_OFFICIAL']}>
+          <ProtectedRoute requiredRole="ADMIN">
             <AdminLayout />
           </ProtectedRoute>
         }

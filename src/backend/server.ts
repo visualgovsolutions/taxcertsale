@@ -6,6 +6,14 @@ import { AuctionService } from './services/auction/AuctionService';
 import { setupAuctionGateway } from './websockets/auction.gateway';
 import prisma from '../lib/prisma';
 import { app, httpServer, apolloServer, initializeApollo } from './app';
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { Server } from 'socket.io';
+import { configureWebSockets } from './websockets';
+import { createApolloServer, createApolloMiddleware } from './graphql';
+import dbInit from '../lib/db-init';
+import { hashPassword } from './utils/passwordUtils';
 
 let auctionService: AuctionService | null = null;
 
@@ -23,6 +31,88 @@ async function startServer() {
 
   // Initialize Apollo Server
   await initializeApollo();
+
+  // Early database check and seeding if needed
+  (async () => {
+    try {
+      console.log('Checking database connection...');
+      // Test the database connection
+      const userCount = await prisma.user.count();
+      console.log(`Found ${userCount} users in database`);
+      
+      // If no users exist, create a default admin user
+      if (userCount === 0) {
+        console.log('No users found in database, creating default admin user...');
+        const hashedPassword = await hashPassword('password123');
+        
+        await prisma.user.create({
+          data: {
+            username: 'admin',
+            email: 'admin@example.com',
+            password: hashedPassword,
+            role: 'ADMIN',
+            status: 'ACTIVE',
+          }
+        });
+        
+        console.log('Created default admin user: admin@example.com');
+      }
+    } catch (error) {
+      console.error('Database initialization error:', error);
+      process.exit(1); // Exit if database connection fails
+    }
+  })();
+
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
+
+  // Initialize Socket.IO
+  const io = new Server(httpServer, {
+    cors: {
+      origin: '*', // In production, restrict to your frontend origin
+      methods: ['GET', 'POST']
+    }
+  });
+
+  // Configure WebSockets
+  configureWebSockets(io);
+
+  // Initialize database
+  dbInit().then(() => {
+    console.log('Database initialized');
+  }).catch(err => {
+    console.error('Failed to initialize database:', err);
+  });
+
+  // Setup Apollo Server
+  const startApolloServer = async () => {
+    const server = createApolloServer(httpServer);
+    await server.start();
+    
+    // Apply Apollo middleware to Express
+    app.use('/graphql', createApolloMiddleware(server));
+    
+    // Serve static files for the frontend
+    app.use(express.static(path.join(__dirname, '../../dist')));
+    
+    // For any other requests, send the index.html file
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, '../../dist/index.html'));
+    });
+    
+    // Start the server
+    httpServer.listen(port, () => {
+      console.log(`🚀 Server ready at http://localhost:${port}`);
+      console.log(`🔌 WebSockets ready at ws://localhost:${port}`);
+      console.log(`🛰️ GraphQL endpoint: http://localhost:${port}/graphql`);
+    });
+  };
+
+  // Start Apollo Server
+  startApolloServer().catch(err => {
+    console.error('Failed to start Apollo Server:', err);
+  });
 
   // Basic graceful shutdown
   const shutdown = async (signal: string) => {
@@ -74,11 +164,6 @@ async function startServer() {
         throw error;
     }
   });
-
-  await new Promise<void>(resolve => httpServer.listen({ port }, resolve));
-  console.log(`🚀 Server ready at http://localhost:${port}`);
-  console.log(`🚀 GraphQL should be ready at http://localhost:${port}/graphql`);
-  console.log('🚀 WebSocket ready for bidding');
 }
 
 if (require.main === module) {

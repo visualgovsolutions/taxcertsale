@@ -84,18 +84,9 @@ const AdminAuditLogsPage: React.FC = () => {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const logsPerPage = 10;
 
-  // Redirect if not authenticated or not admin/county official
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user && user.role !== 'ADMIN' && user.role !== 'COUNTY_OFFICIAL') {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
   // Prepare filter object to match the backend schema structure
   const prepareFilter = () => {
-    const filter: any = {};
+    const filter: Record<string, any> = {};
 
     if (searchTerm) filter.searchTerm = searchTerm;
 
@@ -141,6 +132,7 @@ const AdminAuditLogsPage: React.FC = () => {
     },
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
+    skip: !isAuthenticated || !user || typeof user.role !== 'string' || (user.role !== 'ADMIN' && user.role !== 'COUNTY_OFFICIAL')
   });
 
   // Data Processing
@@ -260,6 +252,15 @@ const AdminAuditLogsPage: React.FC = () => {
     setter(value);
     setCurrentPage(1);
   };
+
+  // Redirect if not authenticated or not admin/county official
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user && user.role !== 'ADMIN' && user.role !== 'COUNTY_OFFICIAL') {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
   if (loading && !data?.activityLogs) {
     return (

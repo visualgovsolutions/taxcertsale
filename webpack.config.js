@@ -11,7 +11,9 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.[contenthash].js',
     publicPath: '/',
-    clean: true,
+    clean: {
+      keep: /assets\//  // Keep the assets directory when cleaning
+    },
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
@@ -48,21 +50,39 @@ module.exports = {
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
         type: 'asset/resource',
+        generator: {
+          filename: 'images/[name][ext]' // Output images to images/ directory
+        }
       },
     ],
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
+      favicon: './public/VG.png', // Use VG.png as favicon
     }), 
     new CopyWebpackPlugin({
       patterns: [
+        // Copy the logo to multiple locations to ensure it's accessible
         { 
-          from: 'public',
-          to: 'public',
-          globOptions: {
-            ignore: ['**/index.html'], // We don't need to copy index.html as HtmlWebpackPlugin already uses it
-          },
+          from: 'public/VG.png',
+          to: 'VG.png',
+        },
+        { 
+          from: 'public/VG.png',
+          to: 'images/VG.png',
+        },
+        { 
+          from: 'public/VG.png',
+          to: 'assets/VG.png',
+        },
+        { 
+          from: 'public/VG.png',
+          to: 'public/VG.png',
+        },
+        { 
+          from: 'public/assets',
+          to: 'assets',
         },
       ],
     }),
@@ -76,24 +96,28 @@ module.exports = {
   devServer: {
     static: {
       directory: path.join(__dirname, 'dist'),
+      watch: true,
+    },
+    devMiddleware: {
+      writeToDisk: true, // Write files to disk in dev mode, so we can see if files are actually created
     },
     historyApiFallback: true, // Important for React Router
     /**
      * CRITICAL PORT CONFIGURATION:
-     * Port 8082: Webpack dev server (frontend)
-     * - Backend API server runs on 8081
-     * - If port 8082 is in use, try 4001 as an alternative
+     * Port 8084: Webpack dev server (frontend) - updated from 8082
+     * - Backend API server runs on 8083 - updated from 8081
+     * - If port 8084 is in use, try 4001 as an alternative
      * - Port 4000 is reserved for legacy testing
      * 
      * IMPORTANT: Keep this in sync with src/config/index.ts
      */
-    port: 8082,
+    port: 8084,
     hot: true,
     open: true,
     proxy: [
       {
         context: ['/api'],
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8083',
         pathRewrite: { '^/api': '' },
         secure: false,
         changeOrigin: true,
@@ -101,7 +125,7 @@ module.exports = {
       {
         // Add proxy rule for GraphQL endpoint
         context: ['/graphql'], 
-        target: 'http://localhost:8081', // Backend GraphQL server
+        target: 'http://localhost:8083', // Backend GraphQL server
         secure: false, 
         changeOrigin: true, 
         // No pathRewrite needed as /graphql matches backend

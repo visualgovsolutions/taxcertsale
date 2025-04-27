@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma'; // Import the central Prisma client
 import { Prisma } from '../generated/prisma'; // Import Auction type as type, but Prisma namespace as value
 import type { Auction } from '../generated/prisma'; // Import Auction type as type, but Prisma namespace as value
+import { AuctionStatus } from '../models/enums/auction-status.enum'; // Import the status enum
 
 /**
  * Auction State Machine
@@ -44,21 +45,21 @@ class AuctionRepository {
 
   async findUpcoming(): Promise<Auction[]> {
     return prisma.auction.findMany({
-      where: { status: 'scheduled' },
+      where: { status: AuctionStatus.UPCOMING },
       orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findActive(): Promise<Auction[]> {
     return prisma.auction.findMany({
-      where: { status: 'active' },
+      where: { status: AuctionStatus.ACTIVE },
       orderBy: { auctionDate: 'asc' }
     });
   }
 
   async findCompleted(): Promise<Auction[]> {
     return prisma.auction.findMany({
-      where: { status: 'closed' },
+      where: { status: AuctionStatus.COMPLETED },
       orderBy: { auctionDate: 'desc' }
     });
   }
@@ -74,7 +75,7 @@ class AuctionRepository {
     return prisma.auction.findMany({
       where: {
         auctionDate: { gte: startDate, lte: endDate },
-        status: 'scheduled'
+        status: AuctionStatus.UPCOMING
       },
       orderBy: { auctionDate: 'asc' }
     });
@@ -150,12 +151,12 @@ class AuctionRepository {
   async activateAuction(id: string): Promise<Auction | null> {
     try {
       return await prisma.auction.update({
-        where: { id: id, status: 'scheduled' },
-        data: { status: 'active' },
+        where: { id: id, status: AuctionStatus.UPCOMING },
+        data: { status: AuctionStatus.ACTIVE },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        console.warn(`Auction ${id} not found or not in scheduled state for activation.`);
+        console.warn(`Auction ${id} not found or not in upcoming state for activation.`);
         return null;
       }
       console.error("Error activating auction:", error);
@@ -166,8 +167,8 @@ class AuctionRepository {
   async completeAuction(id: string): Promise<Auction | null> {
     try {
       return await prisma.auction.update({
-        where: { id: id, status: 'active' },
-        data: { status: 'closed' },
+        where: { id: id, status: AuctionStatus.ACTIVE },
+        data: { status: AuctionStatus.COMPLETED },
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
@@ -186,13 +187,13 @@ class AuctionRepository {
         console.warn(`Auction ${id} not found for cancellation.`);
         return null;
       }
-      if (auction.status !== 'scheduled' && auction.status !== 'active') {
+      if (auction.status !== AuctionStatus.UPCOMING && auction.status !== AuctionStatus.ACTIVE) {
         console.warn(`Auction ${id} cannot be cancelled from status ${auction.status}.`);
         return null;
       }
       return await prisma.auction.update({
         where: { id: id },
-        data: { status: 'cancelled' },
+        data: { status: AuctionStatus.CANCELLED },
       });
     } catch (error) {
       console.error("Error cancelling auction:", error);

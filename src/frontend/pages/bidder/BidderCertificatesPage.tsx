@@ -13,10 +13,9 @@ interface Certificate {
   faceValue: number;
   interestRate: number;
   purchaseDate: string;
-  redemptionAmount?: number;
+  redemptionDate?: string;
   status: string;
-  countyName: string;
-  auctionName?: string;
+  countyId: string;
 }
 
 // GraphQL query to fetch bidder's certificates
@@ -31,10 +30,9 @@ const GET_MY_CERTIFICATES = gql`
       faceValue
       interestRate
       purchaseDate
-      redemptionAmount
+      redemptionDate
       status
-      countyName
-      auctionName
+      countyId
     }
   }
 `;
@@ -60,13 +58,13 @@ const BidderCertificatesPage: React.FC = () => {
               cert.parcelId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cert.propertyAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               cert.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              cert.countyName?.toLowerCase().includes(searchTerm.toLowerCase()))
+              cert.countyId?.toLowerCase().includes(searchTerm.toLowerCase()))
         )
         .sort((a: Certificate, b: Certificate) => {
           // Apply sorting
           if (
             sortField === 'faceValue' ||
-            sortField === 'redemptionAmount' ||
+            sortField === 'redemptionDate' ||
             sortField === 'interestRate'
           ) {
             return sortDirection === 'asc'
@@ -270,7 +268,7 @@ const BidderCertificatesPage: React.FC = () => {
                     <Table.Cell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
                       {certificate.certificateNumber}
                     </Table.Cell>
-                    <Table.Cell>{certificate.countyName}</Table.Cell>
+                    <Table.Cell>{certificate.countyId || 'N/A'}</Table.Cell>
                     <Table.Cell>{certificate.propertyAddress || 'N/A'}</Table.Cell>
                     <Table.Cell>{formatDate(certificate.purchaseDate)}</Table.Cell>
                     <Table.Cell>{formatCurrency(certificate.faceValue)}</Table.Cell>

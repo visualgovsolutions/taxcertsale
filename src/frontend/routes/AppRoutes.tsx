@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import FlowbiteWithRouter from '../components/FlowbiteWithRouter'; // Layout for public/bidder section
 import AdminLayout from '../components/layouts/AdminLayout'; // Layout for admin section
 import LoginPage from '../pages/LoginPage'; // Corrected path
@@ -8,6 +8,7 @@ import BidderAuctionsPage from '../pages/bidder/BidderAuctionsPage';
 import BidderCertificatesPage from '../pages/bidder/BidderCertificatesPage';
 import BidderBidsPage from '../pages/bidder/BidderBidsPage';
 import BidderLayout from '../components/layouts/BidderLayout';
+import { useAuth } from '../context/AuthContext';
 
 // --- Placeholder Page Components ---
 const Dashboard = () => <div className="p-4">Main Dashboard Content</div>;
@@ -34,9 +35,22 @@ interface ProtectedRouteProps {
   allowedRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // In a real app, this would check authentication and roles based on allowedRoles
-  // For now, just render the children to fix the UI
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles = [] }) => {
+  const { isAuthenticated, user } = useAuth();
+  
+  if (!isAuthenticated) {
+    console.log('User not authenticated, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Check if user has required role
+  const userRole = user?.role || '';
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+    console.log(`User role ${userRole} not in allowed roles: ${allowedRoles.join(', ')}`);
+    return <Navigate to="/" replace />;
+  }
+  
+  // User is authenticated and authorized
   return <>{children}</>;
 };
 
@@ -69,24 +83,25 @@ const AppRoutes: React.FC = () => {
           <Route path="audit-logs" element={<AuditLogsPage />} />
         </Route>
 
-        {/* Bidder Routes */}
+        {/* Bidder Routes - FIXED: Use proper nested routing pattern */}
         <Route
           path="/bidder"
           element={
             <ProtectedRoute allowedRoles={['INVESTOR']}>
               <BidderLayout>
-                <Routes>
-                  <Route path="dashboard" element={<BidderDashboardPage />} />
-                  <Route path="auctions" element={<BidderAuctionsPage />} />
-                  <Route path="certificates" element={<BidderCertificatesPage />} />
-                  <Route path="bids" element={<BidderBidsPage />} />
-                  <Route path="profile" element={<BidderProfile />} />
-                  <Route path="settings" element={<BidderSettings />} />
-                </Routes>
+                <Outlet />
               </BidderLayout>
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<BidderDashboardPage />} />
+          <Route path="auctions" element={<BidderAuctionsPage />} />
+          <Route path="certificates" element={<BidderCertificatesPage />} />
+          <Route path="bids" element={<BidderBidsPage />} />
+          <Route path="profile" element={<BidderProfile />} />
+          <Route path="settings" element={<BidderSettings />} />
+        </Route>
 
         {/* Public/Bidder routes */}
         <Route path="/" element={<FlowbiteWithRouter />}>
@@ -103,7 +118,7 @@ const AppRoutes: React.FC = () => {
         <Route path="users/:userId" element={<UserDetailPage />} />
 
         {/* Fallback route - can redirect to homepage or 404 page */}
-        <Route path="*" element={<HomePage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

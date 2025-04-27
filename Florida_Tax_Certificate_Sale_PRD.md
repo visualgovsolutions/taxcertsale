@@ -108,7 +108,6 @@ This platform will digitize the traditionally paper-based process, increase tran
 - Printable property reports
 - Bulk export capabilities
 
-### Bidding System
 ### Auction Management
 - Configurable auction scheduling
 - Automated pre-auction verification processes
@@ -119,10 +118,7 @@ This platform will digitize the traditionally paper-based process, increase tran
 - Auction rules and parameters configuration
 - Starting bid management
 - Bidder eligibility verification
-- Bid cancellation with appropriate restrictions
-- Bulk bid file upload system for pre-prepared bids
-- County parcel data export functionality for offline bid preparation
-- Standardized bid file template with validation
+
 ### Bidding System
 - Real-time competitive bidding interface
 - Florida-compliant reverse-auction format (bidding down from 18% interest rate)
@@ -138,6 +134,17 @@ This platform will digitize the traditionally paper-based process, increase tran
 - Bulk bid file upload system for pre-prepared bids
 - County parcel data export functionality for offline bid preparation
 - Standardized bid file template with validation
+
+### Bidder Dashboard
+- Unified cross-county dashboard for bidders registered in multiple counties
+- Centralized view of certificates, bids, and auction activity across all counties
+- County portal cards with quick access to county-specific auctions
+- Summary metrics showing registered counties, active bids, certificates, and total value
+- Recent bidding activity display across all counties
+- Certificate portfolio management with county filtering
+- Single-login access to all registered county auction systems
+- Customizable dashboard widgets and notifications
+- Mobile-responsive design for on-the-go auction monitoring
 
 ### Payment Processing
 - Secure payment gateway integration
