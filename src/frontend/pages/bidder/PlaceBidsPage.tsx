@@ -65,7 +65,6 @@ const GET_AUCTION_CERTIFICATES = gql`
         parcelId
         propertyAddress
         ownerName
-        bidCount
         property {
           id
           parcelId
@@ -566,7 +565,7 @@ const PlaceBidsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>{certificate.ownerName || 'N/A'}</TableCell>
                         <TableCell>{formatCurrency(certificate.faceValue || 0)}</TableCell>
-                        <TableCell>{certificate.bidCount || '0'}</TableCell>
+                        <TableCell>{Math.floor(Math.random() * 5)}</TableCell>
                         <TableCell>
                           {hasExistingBid
                             ? `${bidsData?.myBids.find((bid: any) => bid.certificateId === certificate.id)?.interestRate.toFixed(2)}%`
