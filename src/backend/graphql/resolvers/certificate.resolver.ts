@@ -11,6 +11,34 @@ const UserRoles = {
   USER: 'USER',
 };
 
+// Helper function to normalize certificate status (convert lowercase to uppercase)
+const normalizeStatus = (certificate: any) => {
+  if (certificate && certificate.status) {
+    // Create a mapping of lowercase to uppercase status values
+    const statusMapping: Record<string, string> = {
+      available: 'AVAILABLE',
+      pending: 'PENDING',
+      auction_scheduled: 'AUCTION_SCHEDULED',
+      auction_active: 'AUCTION_ACTIVE',
+      auction_closed: 'AUCTION_CLOSED',
+      sold: 'SOLD',
+      redeemed: 'REDEEMED',
+      expired: 'EXPIRED',
+    };
+
+    // If the status is a lowercase key in our mapping, convert to uppercase
+    if (statusMapping[certificate.status]) {
+      certificate.status = statusMapping[certificate.status];
+    }
+  }
+  return certificate;
+};
+
+// Helper function to normalize status for an array of certificates
+const normalizeCertificates = (certificates: any[]) => {
+  return certificates.map(normalizeStatus);
+};
+
 // Helper function to check if user is authenticated and has required roles
 const checkAuth = (context: GraphQLContext, roles: string[]) => {
   if (!context.isAuthenticated || !context.user) {
@@ -82,6 +110,7 @@ type UpdateCertificateInput = {
   redemptionDate?: string;
   expirationDate?: string;
   batchId?: string;
+  propertyId?: string;
 };
 
 // Certificate resolvers
@@ -89,7 +118,7 @@ export const certificateResolvers = {
   Query: {
     certificates: async (_: ResolverParent, args: CertificateArgs, context: GraphQLContext) => {
       try {
-        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
+        checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
 
         const { filter, limit = 20, offset = 0, page = 1 } = args;
         const skip = page && page > 1 ? (page - 1) * (limit || 20) : offset;
@@ -139,13 +168,16 @@ export const certificateResolvers = {
             take: limit,
             skip,
             orderBy: { updatedAt: 'desc' },
+            include: {
+              property: true,
+            },
           }),
           prisma.certificate.count({ where }),
         ]);
 
         return {
           totalCount,
-          certificates,
+          certificates: normalizeCertificates(certificates),
         };
       } catch (error) {
         console.error('Error fetching certificates:', error);
@@ -160,7 +192,12 @@ export const certificateResolvers = {
       try {
         checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
 
-        const certificate = await prisma.certificate.findUnique({ where: { id } });
+        const certificate = await prisma.certificate.findUnique({
+          where: { id },
+          include: {
+            property: true,
+          },
+        });
 
         if (!certificate) {
           throw new GraphQLError(`Certificate with ID ${id} not found`, {
@@ -168,7 +205,7 @@ export const certificateResolvers = {
           });
         }
 
-        return certificate;
+        return normalizeStatus(certificate);
       } catch (error) {
         console.error(`Error fetching certificate ${id}:`, error);
         if (error instanceof GraphQLError) throw error;
@@ -186,10 +223,15 @@ export const certificateResolvers = {
       try {
         checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
 
-        return await prisma.certificate.findMany({
+        const certificates = await prisma.certificate.findMany({
           where: { status },
           orderBy: { updatedAt: 'desc' },
+          include: {
+            property: true,
+          },
         });
+
+        return normalizeCertificates(certificates);
       } catch (error) {
         console.error(`Error fetching certificates by status ${status}:`, error);
         if (error instanceof GraphQLError) throw error;
@@ -207,10 +249,15 @@ export const certificateResolvers = {
       try {
         checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL]);
 
-        return await prisma.certificate.findMany({
+        const certificates = await prisma.certificate.findMany({
           where: { countyId },
           orderBy: { updatedAt: 'desc' },
+          include: {
+            property: true,
+          },
         });
+
+        return normalizeCertificates(certificates);
       } catch (error) {
         console.error(`Error fetching certificates by county ${countyId}:`, error);
         if (error instanceof GraphQLError) throw error;
@@ -228,10 +275,15 @@ export const certificateResolvers = {
       try {
         checkAuth(context, [UserRoles.ADMIN, UserRoles.COUNTY_OFFICIAL, UserRoles.INVESTOR]);
 
-        return await prisma.certificate.findMany({
+        const certificates = await prisma.certificate.findMany({
           where: { auctionId },
           orderBy: { updatedAt: 'desc' },
+          include: {
+            property: true,
+          },
         });
+
+        return normalizeCertificates(certificates);
       } catch (error) {
         console.error(`Error fetching certificates by auction ${auctionId}:`, error);
         if (error instanceof GraphQLError) throw error;
@@ -253,18 +305,65 @@ export const certificateResolvers = {
 
         const now = new Date();
 
+        // Check if we need to create a Property
+        let propertyId: string | undefined;
+
+        if (input.parcelId) {
+          // Check if a property with this parcel ID already exists
+          const existingProperty = await prisma.property.findUnique({
+            where: { parcelId: input.parcelId },
+          });
+
+          if (existingProperty) {
+            propertyId = existingProperty.id;
+          } else {
+            // Create a new property
+            // Parse the property address if provided
+            let address = '',
+              city = '',
+              state = 'FL',
+              zipCode = '';
+
+            if (input.propertyAddress) {
+              const parts = input.propertyAddress.split(',').map(part => part.trim());
+              if (parts.length >= 1) address = parts[0];
+              if (parts.length >= 2) city = parts[1];
+              if (parts.length >= 3) {
+                const stateZip = parts[2].split(' ');
+                if (stateZip.length >= 1) state = stateZip[0];
+                if (stateZip.length >= 2) zipCode = stateZip[1];
+              }
+            }
+
+            const newProperty = await prisma.property.create({
+              data: {
+                parcelId: input.parcelId,
+                address: address || 'Unknown',
+                city: city || 'Unknown',
+                state: state,
+                zipCode: zipCode || '00000',
+                countyId: input.countyId,
+              },
+            });
+
+            propertyId = newProperty.id;
+          }
+        }
+
         // Convert input to the format expected by Prisma
         const certificateData: any = {
           certificateNumber: input.certificateNumber,
           countyId: input.countyId,
-          parcelId: input.parcelId,
-          propertyAddress: input.propertyAddress || null,
-          ownerName: input.ownerName || null,
           faceValue: input.faceValue,
           status: input.status,
           createdAt: now,
           updatedAt: now,
         };
+
+        // Add the propertyId if we have one
+        if (propertyId) {
+          certificateData.propertyId = propertyId;
+        }
 
         if (input.auctionDate) {
           certificateData.auctionDate = new Date(input.auctionDate);
@@ -319,6 +418,79 @@ export const certificateResolvers = {
           });
         }
 
+        // Handle property updates if parcelId or propertyAddress changed
+        if (input.parcelId !== undefined || input.propertyAddress !== undefined) {
+          // If certificate doesn't have a propertyId, we need to create a property
+          if (!existingCertificate.propertyId || input.parcelId !== undefined) {
+            const parcelId = input.parcelId || (existingCertificate as any).parcelId;
+
+            if (parcelId) {
+              let property = await prisma.property.findUnique({
+                where: { parcelId },
+              });
+
+              if (!property) {
+                // Create a new property
+                // Parse the property address if provided
+                let address = '',
+                  city = '',
+                  state = 'FL',
+                  zipCode = '';
+
+                if (input.propertyAddress) {
+                  const parts = input.propertyAddress.split(',').map(part => part.trim());
+                  if (parts.length >= 1) address = parts[0];
+                  if (parts.length >= 2) city = parts[1];
+                  if (parts.length >= 3) {
+                    const stateZip = parts[2].split(' ');
+                    if (stateZip.length >= 1) state = stateZip[0];
+                    if (stateZip.length >= 2) zipCode = stateZip[1];
+                  }
+                }
+
+                property = await prisma.property.create({
+                  data: {
+                    parcelId,
+                    address: address || 'Unknown',
+                    city: city || 'Unknown',
+                    state: state,
+                    zipCode: zipCode || '00000',
+                    countyId: input.countyId || existingCertificate.countyId,
+                  },
+                });
+              } else if (input.propertyAddress) {
+                // Update existing property if propertyAddress changed
+                let address = '',
+                  city = '',
+                  state = property.state,
+                  zipCode = property.zipCode;
+
+                const parts = input.propertyAddress.split(',').map(part => part.trim());
+                if (parts.length >= 1) address = parts[0];
+                if (parts.length >= 2) city = parts[1];
+                if (parts.length >= 3) {
+                  const stateZip = parts[2].split(' ');
+                  if (stateZip.length >= 1) state = stateZip[0];
+                  if (stateZip.length >= 2) zipCode = stateZip[1];
+                }
+
+                await prisma.property.update({
+                  where: { id: property.id },
+                  data: {
+                    address: address || property.address,
+                    city: city || property.city,
+                    state,
+                    zipCode,
+                  },
+                });
+              }
+
+              // Update the certificate's propertyId
+              input.propertyId = property.id;
+            }
+          }
+        }
+
         // Prepare update data
         const updateData: any = {
           updatedAt: new Date(),
@@ -328,13 +500,11 @@ export const certificateResolvers = {
         if (input.certificateNumber !== undefined)
           updateData.certificateNumber = input.certificateNumber;
         if (input.countyId !== undefined) updateData.countyId = input.countyId;
-        if (input.parcelId !== undefined) updateData.parcelId = input.parcelId;
-        if (input.propertyAddress !== undefined) updateData.propertyAddress = input.propertyAddress;
-        if (input.ownerName !== undefined) updateData.ownerName = input.ownerName;
+        if (input.propertyId !== undefined) updateData.propertyId = input.propertyId;
         if (input.faceValue !== undefined) updateData.faceValue = input.faceValue;
         if (input.status !== undefined) updateData.status = input.status;
         if (input.interestRate !== undefined) updateData.interestRate = input.interestRate;
-        if (input.purchaserId !== undefined) updateData.purchaserId = input.purchaserId;
+        if (input.purchaserId !== undefined) updateData.buyerId = input.purchaserId; // Map to buyerId
         if (input.batchId !== undefined) updateData.batchId = input.batchId;
 
         // Handle date fields
@@ -347,9 +517,7 @@ export const certificateResolvers = {
         if (input.redemptionDate !== undefined) {
           updateData.redemptionDate = input.redemptionDate ? new Date(input.redemptionDate) : null;
         }
-        if (input.expirationDate !== undefined) {
-          updateData.expirationDate = input.expirationDate ? new Date(input.expirationDate) : null;
-        }
+        // Note: expirationDate is handled by resolver, not stored in DB
 
         // Update the certificate
         const certificate = await prisma.certificate.update({
@@ -567,6 +735,202 @@ export const certificateResolvers = {
         throw new GraphQLError(
           `Failed to update certificate status: ${error instanceof Error ? error.message : 'Unknown error'}`
         );
+      }
+    },
+  },
+
+  Certificate: {
+    parcelId: async (parent: any) => {
+      // If parent already has parcelId (direct field or included via prisma), return it
+      if (parent.parcelId) return parent.parcelId;
+
+      // Otherwise, we need to fetch the property to get its parcelId
+      if (!parent.propertyId) {
+        throw new GraphQLError('Certificate is missing property information');
+      }
+
+      try {
+        const property = await prisma.property.findUnique({
+          where: { id: parent.propertyId },
+          select: { parcelId: true },
+        });
+
+        if (!property) {
+          throw new GraphQLError(`Property with ID ${parent.propertyId} not found`);
+        }
+
+        return property.parcelId;
+      } catch (error) {
+        console.error(`Error resolving parcelId for certificate ${parent.id}:`, error);
+        throw new GraphQLError(
+          `Failed to resolve parcelId: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    propertyAddress: async (parent: any) => {
+      // If parent already has propertyAddress (direct field or included via prisma), return it
+      if (parent.propertyAddress) return parent.propertyAddress;
+
+      // Otherwise, we need to fetch the property to get its address
+      if (!parent.propertyId) {
+        throw new GraphQLError('Certificate is missing property information');
+      }
+
+      try {
+        const property = await prisma.property.findUnique({
+          where: { id: parent.propertyId },
+          select: { address: true, city: true, state: true, zipCode: true },
+        });
+
+        if (!property) {
+          throw new GraphQLError(`Property with ID ${parent.propertyId} not found`);
+        }
+
+        // Format the address
+        return `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`;
+      } catch (error) {
+        console.error(`Error resolving propertyAddress for certificate ${parent.id}:`, error);
+        throw new GraphQLError(
+          `Failed to resolve propertyAddress: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    },
+
+    ownerName: async (parent: any) => {
+      // If parent already has ownerName (direct field or included via prisma), return it
+      if (parent.ownerName) return parent.ownerName;
+
+      // Since ownerName is not in the database schema, we could:
+      // 1. Return a placeholder or null
+      // 2. Fetch it from an external source if available
+      // 3. Derive it from another field
+
+      // For now, returning a placeholder with the parcel ID if available
+      try {
+        let parcelId = parent.parcelId;
+
+        if (!parcelId && parent.propertyId) {
+          const property = await prisma.property.findUnique({
+            where: { id: parent.propertyId },
+            select: { parcelId: true },
+          });
+
+          if (property) {
+            parcelId = property.parcelId;
+          }
+        }
+
+        return parcelId ? `Owner of ${parcelId}` : null;
+      } catch (error) {
+        console.error(`Error resolving ownerName for certificate ${parent.id}:`, error);
+        return null; // Return null on error rather than throw for this optional field
+      }
+    },
+
+    auctionDate: async (parent: any) => {
+      // If parent already has auctionDate, return it
+      if (parent.auctionDate) {
+        return typeof parent.auctionDate === 'string'
+          ? parent.auctionDate
+          : parent.auctionDate.toISOString();
+      }
+
+      // Otherwise, fetch it from the auction
+      if (!parent.auctionId) {
+        return null; // No auction associated
+      }
+
+      try {
+        const auction = await prisma.auction.findUnique({
+          where: { id: parent.auctionId },
+          select: { auctionDate: true },
+        });
+
+        if (!auction) {
+          return null;
+        }
+
+        return auction.auctionDate.toISOString();
+      } catch (error) {
+        console.error(`Error resolving auctionDate for certificate ${parent.id}:`, error);
+        return null; // Return null on error rather than throw for this optional field
+      }
+    },
+
+    expirationDate: async (parent: any) => {
+      // If parent already has expirationDate, return it
+      if (parent.expirationDate) {
+        return typeof parent.expirationDate === 'string'
+          ? parent.expirationDate
+          : parent.expirationDate.toISOString();
+      }
+
+      // Calculate expiration date from purchase date (typically 3 years after purchase)
+      if (parent.purchaseDate) {
+        const purchaseDate = new Date(parent.purchaseDate);
+        const expirationDate = new Date(purchaseDate);
+        expirationDate.setFullYear(expirationDate.getFullYear() + 3); // Add 3 years
+        return expirationDate.toISOString();
+      }
+
+      // If no purchase date, check if there's an auction date to base on
+      try {
+        let auctionDate: Date | null = null;
+
+        if (parent.auctionId) {
+          const auction = await prisma.auction.findUnique({
+            where: { id: parent.auctionId },
+            select: { auctionDate: true },
+          });
+
+          if (auction) {
+            auctionDate = auction.auctionDate;
+          }
+        }
+
+        if (auctionDate) {
+          const expirationDate = new Date(auctionDate);
+          expirationDate.setFullYear(expirationDate.getFullYear() + 3); // Add 3 years
+          return expirationDate.toISOString();
+        }
+
+        return null;
+      } catch (error) {
+        console.error(`Error resolving expirationDate for certificate ${parent.id}:`, error);
+        return null; // Return null on error rather than throw for this optional field
+      }
+    },
+
+    purchaserId: (parent: any) => {
+      // Map buyerId to purchaserId for GraphQL schema compatibility
+      return parent.buyerId || null;
+    },
+
+    property: async (parent: any) => {
+      if (!parent.propertyId) return null;
+
+      try {
+        return await prisma.property.findUnique({
+          where: { id: parent.propertyId },
+        });
+      } catch (error) {
+        console.error(`Error fetching property for certificate ${parent.id}:`, error);
+        return null;
+      }
+    },
+
+    bidCount: async (parent: any) => {
+      try {
+        console.log(`Fetching bid count for certificate ${parent.id}`);
+        const count = await prisma.bid.count({
+          where: { certificateId: parent.id },
+        });
+        console.log(`Found ${count} bids for certificate ${parent.id}`);
+        return count;
+      } catch (error) {
+        console.error(`Error counting bids for certificate ${parent.id}:`, error);
+        return 0;
       }
     },
   },
