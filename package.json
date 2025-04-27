@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "description": "Florida Tax Certificate Sale Platform",
   "main": "src/backend/server.js",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "scripts": {
     "start": "node dist/backend/server.js",
     "dev:server": "ts-node-dev -r tsconfig-paths/register --transpile-only src/backend/server.ts",
-    "dev:client": "webpack serve --port 8082",
+    "dev:client": "webpack serve --port 8084",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build:server": "tsc",
     "build:client": "webpack --mode production",
@@ -22,9 +25,10 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky",
     "test:ui": "node tests/puppeteer-runner.js",
+    "test:bidder-auctions": "node tests/bidder-auctions-test.js",
     "validate-routes": "node ./scripts/validate-routes.js",
     "precommit": "npm run validate-routes",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node prisma/seed.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -39,9 +43,14 @@
     "@ant-design/icons": "^6.0.0",
     "@apollo/client": "^3.13.8",
     "@apollo/server": "^4.12.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.0.2",
+    "@mui/material": "^7.0.2",
     "@nestjs/common": "^11.0.20",
     "@nestjs/typeorm": "^11.0.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/jwt-decode": "^2.2.1",
     "antd": "^5.24.8",
     "autoprefixer": "^10.4.21",
     "axios": "^1.8.4",
@@ -58,6 +67,7 @@
     "graphql-type-json": "^0.3.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
     "mongoose": "^7.8.6",
     "pdf-lib": "^1.17.1",
     "pg": "^8.11.3",
