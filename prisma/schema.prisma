@@ -12,6 +12,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 // Define models based on previous TypeORM entities
@@ -35,8 +36,40 @@ model User {
   bids Bid[]
   activityLogs UserActivityLog[] // Add relation to activity logs
   systemActivityLogs SystemActivityLog[] // Add relation to system activity logs
+  w9Forms W9FormData[] // Add relation to W9 form data
 
   @@map("users")
+}
+
+// New model for W9 Form Data
+model W9FormData {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  countyId        String   @map("county_id")
+  name            String
+  businessName    String?
+  taxClassification String
+  address         String
+  city            String
+  state           String
+  zipCode         String   @map("zip_code")
+  accountNumbers  String?  @map("account_numbers")
+  ssn             String?
+  ein             String?
+  status          String   @default("SUBMITTED") // SUBMITTED, APPROVED, REJECTED
+  fileUrl         String?  @map("file_url") // URL to the uploaded W9 form PDF
+  approvedBy      String?  @map("approved_by") // ID of admin who approved the form
+  rejectionReason String?  @map("rejection_reason")
+  submissionDate  DateTime @default(now()) @map("submission_date")
+  approvalDate    DateTime? @map("approval_date")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  county          County   @relation(fields: [countyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, countyId])
+  @@map("w9_form_data")
 }
 
 model UserActivityLog {
@@ -87,12 +120,15 @@ model County {
   description          String?
   latitude             Float?
   longitude            Float?
+  primaryColor         String?  @map("primary_color")
+  logoUrl              String?  @map("logo_url")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   properties Property[]
   auctions   Auction[]
   certificates Certificate[]
+  w9Forms    W9FormData[] // Add relation to W9 form data
 
   @@map("counties")
 }
@@ -117,9 +153,16 @@ model Property {
 
 model Auction {
   id             String   @id @default(uuid())
+  name           String   @default("County Tax Certificate Auction")
   countyId       String   @map("county_id")
   auctionDate    DateTime @map("auction_date")
-  status         String   @default("scheduled") // e.g., scheduled, active, closed, cancelled
+  startTime      String?  @map("start_time")
+  endTime        String?  @map("end_time")
+  status         String   @default("UPCOMING") // Values: UPCOMING, ACTIVE, COMPLETED, CANCELLED
+  description    String?
+  location       String?
+  registrationUrl String? @map("registration_url")
+  metadata       Json?
   adUrl          String?  @map("ad_url")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")

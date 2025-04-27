@@ -1,5 +1,147 @@
 scalar JSON
 
+# --- Certificate Types ---
+type Certificate {
+  id: ID!
+  certificateNumber: String!
+  countyId: String!
+  parcelId: String!
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float!
+  auctionDate: String
+  status: CertificateStatus!
+  interestRate: Float
+  purchaserId: String
+  purchaseDate: String
+  redemptionDate: String
+  expirationDate: String
+  batchId: String
+  bidCount: Int
+  property: Property
+  createdAt: String!
+  updatedAt: String!
+}
+
+# Property type for displaying property details
+type Property {
+  id: ID!
+  parcelId: String!
+  address: String!
+  city: String!
+  state: String!
+  zipCode: String!
+  legalDescription: String
+  countyId: String!
+  county: County
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum CertificateStatus {
+  PENDING
+  AVAILABLE
+  AUCTION_SCHEDULED
+  AUCTION_ACTIVE
+  AUCTION_CLOSED
+  SOLD
+  REDEEMED
+  EXPIRED
+  redeemed
+  available
+}
+
+input CertificateFilterInput {
+  statuses: [CertificateStatus!]
+  countyId: String
+  auctionId: String
+  fromDate: String
+  toDate: String
+  minFaceValue: Float
+  maxFaceValue: Float
+  searchTerm: String
+}
+
+type CertificateResponse {
+  totalCount: Int!
+  certificates: [Certificate!]!
+}
+
+input CreateCertificateInput {
+  certificateNumber: String!
+  countyId: String!
+  parcelId: String!
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float!
+  auctionDate: String
+  status: CertificateStatus!
+  interestRate: Float
+  batchId: String
+}
+
+input UpdateCertificateInput {
+  certificateNumber: String
+  countyId: String
+  parcelId: String
+  propertyAddress: String
+  ownerName: String
+  faceValue: Float
+  auctionDate: String
+  status: CertificateStatus
+  interestRate: Float
+  purchaserId: String
+  purchaseDate: String
+  redemptionDate: String
+  expirationDate: String
+  batchId: String
+}
+
+# Add W9FormData types
+type W9FormData {
+  id: ID!
+  userId: ID!
+  countyId: ID!
+  county: County
+  name: String!
+  businessName: String
+  taxClassification: String!
+  address: String!
+  city: String!
+  state: String!
+  zipCode: String!
+  accountNumbers: String
+  ssn: String
+  ein: String
+  status: W9FormStatus!
+  fileUrl: String
+  submissionDate: String!
+  approvalDate: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum W9FormStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+input W9FormInput {
+  countyId: ID!
+  name: String!
+  businessName: String
+  taxClassification: String!
+  address: String!
+  city: String!
+  state: String!
+  zipCode: String!
+  accountNumbers: String
+  ssn: String
+  ein: String
+  fileUrl: String
+}
+
 # Base Query type
 type Query {
   _empty: String # Placeholder field to ensure Query type is valid
@@ -16,6 +158,11 @@ type Query {
   users: [User!]! # Query to get all users
   user(id: ID!): User # Query to get a single user by ID
   usersRegisteredTodayCount: Int! # Query for count of users registered today
+  
+  # Bidder-specific queries
+  myBids: [Bid!]! # Query to get the current user's bids
+  myCertificates: [Certificate!]! # Query to get the current user's certificates
+  registeredCounties: [County!]! # Query to get counties the current user is registered with
   
   # System settings related queries
   systemSettings: SystemSettings!
@@ -40,6 +187,12 @@ type Query {
   certificatesByStatus(status: CertificateStatus!): [Certificate!]!
   certificatesByCounty(countyId: ID!): [Certificate!]!
   certificatesByAuction(auctionId: ID!): [Certificate!]!
+  
+  # W9 Form queries
+  myW9Forms: [W9FormData!]!
+  w9FormsByCounty(countyId: ID!): [W9FormData!]!
+  w9FormStatus(countyId: ID!): W9FormStatus
+  pendingW9Forms(countyId: ID): [W9FormData!]!
 }
 
 # Base Mutation type (can be added later)
@@ -59,15 +212,16 @@ enum AuctionStatus {
 type Auction {
   id: ID!
   name: String!
+  countyId: ID!
+  county: County
   auctionDate: String!
-  startTime: String!
+  startTime: String
   endTime: String
   status: AuctionStatus!
   description: String
   location: String
   registrationUrl: String
-  metadata: JSON
-  countyId: String!
+  adUrl: String
   createdAt: String!
   updatedAt: String!
 }
@@ -128,6 +282,9 @@ type Mutation {
   login(email: String!, password: String!): AuthPayload!
   updateUserStatus(id: ID!, status: UserStatus!, reason: String): User!
   
+  # Bidding mutations
+  createBid(certificateId: ID!, interestRate: Float!): Bid!
+  
   # System settings related mutations
   updateSystemSettings(input: SystemSettingsInput!): SystemSettings!
   updatePasswordPolicy(input: PasswordPolicyInput!): PasswordPolicy!
@@ -156,6 +313,14 @@ type Mutation {
   assignCertificatesToAuction(certificateIds: [ID!]!, auctionId: ID!): Int!
   markCertificateAsRedeemed(id: ID!, redemptionDate: String!): Certificate!
   updateCertificateStatus(id: ID!, status: CertificateStatus!): Certificate!
+  
+  # W9 Form mutations
+  submitW9Form(input: W9FormInput!): W9FormData!
+  approveW9Form(id: ID!): W9FormData!
+  rejectW9Form(id: ID!, reason: String!): W9FormData!
+  
+  # Bid Upload mutations
+  uploadBids(file: Upload!): BidUploadResult!
 }
 
 # Management data type
@@ -179,6 +344,8 @@ type County {
   description: String
   latitude: Float
   longitude: Float
+  primaryColor: String
+  logoUrl: String
   createdAt: String! # Consider using a DateTime scalar if needed
   updatedAt: String! # Consider using a DateTime scalar if needed
 }
@@ -194,6 +361,8 @@ input CreateCountyInput {
   description: String
   latitude: Float
   longitude: Float
+  primaryColor: String
+  logoUrl: String
 }
 
 input UpdateCountyInput {
@@ -206,6 +375,8 @@ input UpdateCountyInput {
   description: String
   latitude: Float
   longitude: Float
+  primaryColor: String
+  logoUrl: String
 }
 
 # Auth Types
@@ -522,80 +693,41 @@ type RedemptionRatePoint {
   rate: Float!
 }
 
-# --- Certificate Types ---
-type Certificate {
+# Define Bid type
+type Bid {
   id: ID!
-  certificateNumber: String!
-  countyId: String!
-  parcelId: String!
+  certificateId: ID!
+  auctionId: ID!
+  userId: ID!
+  interestRate: Float!  # Now using interest rate instead of bidAmount
+  bidTime: String!
+  bidType: String!
+  status: String!
+  isWinningBid: Boolean!
+  winningBid: Boolean  # Alias for isWinningBid for backward compatibility
+  bidDate: String      # Alias for bidTime for backward compatibility
+  certificateNumber: String
   propertyAddress: String
-  ownerName: String
-  faceValue: Float!
-  auctionDate: String
-  status: CertificateStatus!
-  interestRate: Float
-  purchaserId: String
-  purchaseDate: String
-  redemptionDate: String
-  expirationDate: String
-  batchId: String
+  parcelId: String
+  county: String
+  certificate: Certificate
+  auction: Auction
   createdAt: String!
   updatedAt: String!
 }
 
-enum CertificateStatus {
-  PENDING
-  AVAILABLE
-  AUCTION_SCHEDULED
-  AUCTION_ACTIVE
-  AUCTION_CLOSED
-  SOLD
-  REDEEMED
-  EXPIRED
+# --- Bid Upload Types ---
+scalar Upload
+
+type BidUploadResult {
+  success: Boolean!
+  message: String
+  processedCount: Int!
+  errorCount: Int
+  errors: [BidUploadError!]
 }
 
-input CertificateFilterInput {
-  statuses: [CertificateStatus!]
-  countyId: String
-  auctionId: String
-  fromDate: String
-  toDate: String
-  minFaceValue: Float
-  maxFaceValue: Float
-  searchTerm: String
-}
-
-type CertificateResponse {
-  totalCount: Int!
-  certificates: [Certificate!]!
-}
-
-input CreateCertificateInput {
-  certificateNumber: String!
-  countyId: String!
-  parcelId: String!
-  propertyAddress: String
-  ownerName: String
-  faceValue: Float!
-  auctionDate: String
-  status: CertificateStatus!
-  interestRate: Float
-  batchId: String
-}
-
-input UpdateCertificateInput {
-  certificateNumber: String
-  countyId: String
-  parcelId: String
-  propertyAddress: String
-  ownerName: String
-  faceValue: Float
-  auctionDate: String
-  status: CertificateStatus
-  interestRate: Float
-  purchaserId: String
-  purchaseDate: String
-  redemptionDate: String
-  expirationDate: String
-  batchId: String
+type BidUploadError {
+  line: Int!
+  message: String!
 } 

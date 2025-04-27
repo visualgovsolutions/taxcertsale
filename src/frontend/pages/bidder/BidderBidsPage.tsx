@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card, Table, Badge, Button, Spinner, Tabs, TextInput, Modal, Label } from 'flowbite-react';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { HiSearch, HiOutlineExclamationCircle, HiArrowUp } from 'react-icons/hi';
+import { useParams } from 'react-router-dom';
+import CountyHeader from '../../components/bidder/CountyHeader';
 
 // Define interfaces for our data types
 interface Certificate {
@@ -24,12 +26,13 @@ interface Bid {
   propertyAddress?: string;
   parcelId: string;
   county: string;
-  bidAmount: number;
+  interestRate: number;
   bidDate: string;
   status: string;
-  winningBid?: number;
+  winningBid?: boolean;
   certificate?: Certificate;
   auction?: Auction;
+  bidTime?: string;
 }
 
 // GraphQL queries
@@ -39,19 +42,19 @@ const GET_MY_BIDS = gql`
       id
       certificateId
       auctionId
+      interestRate
+      bidTime
+      bidDate
+      status
+      isWinningBid
+      winningBid
       certificateNumber
       propertyAddress
       parcelId
       county
-      bidAmount
-      bidDate
-      status
-      winningBid
       certificate {
         faceValue
         interestRate
-        propertyAddress
-        ownerName
       }
       auction {
         name
@@ -63,10 +66,10 @@ const GET_MY_BIDS = gql`
 
 // GraphQL mutations
 const INCREASE_BID = gql`
-  mutation IncreaseBid($bidId: ID!, $newAmount: Float!) {
-    increaseBid(bidId: $bidId, amount: $newAmount) {
+  mutation IncreaseBid($bidId: ID!, $newRate: Float!) {
+    increaseBid(bidId: $bidId, rate: $newRate) {
       id
-      bidAmount
+      interestRate
       status
       winningBid
     }
@@ -88,7 +91,7 @@ const BidderBidsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showBidModal, setShowBidModal] = useState(false);
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
-  const [newBidAmount, setNewBidAmount] = useState('');
+  const [newBidRate, setNewBidRate] = useState('');
 
   // Fetch bids data
   const { loading, error, data, refetch } = useQuery(GET_MY_BIDS);
@@ -100,6 +103,63 @@ const BidderBidsPage: React.FC = () => {
       refetch();
     },
   });
+
+  // Format functions
+  const formatPercent = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      // Try parsing as a date string first
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+      
+      // If invalid, try parsing as timestamp
+      const timestamp = parseInt(dateString);
+      if (!isNaN(timestamp)) {
+        const dateFromTimestamp = new Date(timestamp);
+        if (!isNaN(dateFromTimestamp.getTime())) {
+          return dateFromTimestamp.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+        }
+      }
+      
+      // If all parsing fails
+      return 'Date unavailable';
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Date unavailable';
+    }
+  };
+
+  // Sort bids by date
+  const sortBids = (a: Bid, b: Bid) => {
+    // Use bidDate if available, fall back to bidTime
+    const aDate = a.bidDate ? new Date(a.bidDate) : a.bidTime ? new Date(a.bidTime) : new Date();
+    const bDate = b.bidDate ? new Date(b.bidDate) : b.bidTime ? new Date(b.bidTime) : new Date();
+    return bDate.getTime() - aDate.getTime();
+  };
 
   // Filter and process bids
   const processBids = (bids: Bid[] = []) => {
@@ -113,7 +173,7 @@ const BidderBidsPage: React.FC = () => {
           bid.parcelId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           bid.county?.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      .sort((a, b) => new Date(b.bidDate).getTime() - new Date(a.bidDate).getTime());
+      .sort(sortBids);
   };
 
   // Filter bids by status for tabs
@@ -124,23 +184,6 @@ const BidderBidsPage: React.FC = () => {
   const completedBids = processBids(
     data?.myBids?.filter((bid: Bid) => ['WON', 'LOST', 'CANCELLED'].includes(bid.status))
   );
-
-  // Format functions
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   // Calculate time remaining for auction
   const getTimeRemaining = (endTime: string) => {
@@ -164,18 +207,21 @@ const BidderBidsPage: React.FC = () => {
   // Handle opening the increase bid modal
   const handleOpenBidModal = (bid: Bid) => {
     setSelectedBid(bid);
-    setNewBidAmount((bid.bidAmount * 1.05).toFixed(2)); // Default 5% increase
+    // For Florida tax certificates, we want to decrease the interest rate
+    // Default to 0.25% lower than the current rate
+    const newRate = Math.max(0, (bid.interestRate - 0.25));
+    setNewBidRate(newRate.toFixed(2)); 
     setShowBidModal(true);
   };
 
   // Handle submitting the increased bid
   const handleIncreaseBid = () => {
-    if (!selectedBid || !newBidAmount) return;
+    if (!selectedBid || !newBidRate) return;
 
     increaseBid({
       variables: {
         bidId: selectedBid.id,
-        newAmount: parseFloat(newBidAmount),
+        newRate: parseFloat(newBidRate),
       },
     });
   };
@@ -220,12 +266,10 @@ const BidderBidsPage: React.FC = () => {
       <div className="overflow-x-auto">
         <Table striped>
           <Table.Head>
-            <Table.HeadCell>Certificate #</Table.HeadCell>
+            <Table.HeadCell>Cert. #</Table.HeadCell>
             <Table.HeadCell>Property</Table.HeadCell>
-            <Table.HeadCell>County</Table.HeadCell>
-            <Table.HeadCell>Auction</Table.HeadCell>
-            <Table.HeadCell>Your Bid</Table.HeadCell>
-            <Table.HeadCell>Bid Date</Table.HeadCell>
+            <Table.HeadCell>Interest Rate</Table.HeadCell>
+            <Table.HeadCell>Date</Table.HeadCell>
             <Table.HeadCell>Status</Table.HeadCell>
             <Table.HeadCell>
               <span className="sr-only">Actions</span>
@@ -233,55 +277,43 @@ const BidderBidsPage: React.FC = () => {
           </Table.Head>
           <Table.Body className="divide-y">
             {bids.map(bid => (
-              <Table.Row key={bid.id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
-                <Table.Cell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
-                  {bid.certificateNumber}
+              <Table.Row
+                key={bid.id}
+                className={bid.status === 'OUTBID' ? 'bg-red-50' : 'bg-white hover:bg-gray-50'}
+              >
+                <Table.Cell className="font-medium">{bid.certificateNumber}</Table.Cell>
+                <Table.Cell>
+                  <div>
+                    <div className="text-sm font-medium">{bid.propertyAddress}</div>
+                    <div className="text-xs text-gray-500">
+                      {bid.parcelId} | {bid.county}
+                    </div>
+                  </div>
                 </Table.Cell>
                 <Table.Cell>
-                  {bid.propertyAddress || bid.certificate?.propertyAddress || 'N/A'}
-                </Table.Cell>
-                <Table.Cell>{bid.county}</Table.Cell>
-                <Table.Cell>
-                  {bid.auction?.name || 'N/A'}
-                  {bid.auction?.endTime && bid.status !== 'WON' && bid.status !== 'LOST' && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {getTimeRemaining(bid.auction.endTime)} remaining
+                  {formatPercent(bid.interestRate)}
+                  {bid.certificate?.faceValue && (
+                    <div className="text-xs text-gray-500">
+                      Face Value: {formatCurrency(bid.certificate.faceValue)}
                     </div>
                   )}
                 </Table.Cell>
-                <Table.Cell>
-                  {formatCurrency(bid.bidAmount)}
-                  {bid.status === 'OUTBID' && (
-                    <div className="text-xs text-red-500 mt-1">
-                      Current highest: {formatCurrency(bid.winningBid || 0)}
-                    </div>
-                  )}
-                </Table.Cell>
-                <Table.Cell>{formatDate(bid.bidDate)}</Table.Cell>
+                <Table.Cell>{formatDate(bid.bidDate || bid.bidTime || '')}</Table.Cell>
                 <Table.Cell>
                   <Badge color={statusLabels[bid.status]?.color || 'gray'}>
                     {statusLabels[bid.status]?.label || bid.status}
                   </Badge>
                 </Table.Cell>
                 <Table.Cell>
+                  {/* Only show lower interest rate button for ongoing auctions */}
                   {['ACTIVE', 'OUTBID'].includes(bid.status) && (
                     <Button
                       size="xs"
-                      color={bid.status === 'OUTBID' ? 'warning' : 'blue'}
+                      color={bid.status === 'OUTBID' ? 'failure' : 'light'}
                       onClick={() => handleOpenBidModal(bid)}
                     >
-                      <HiArrowUp className="mr-1 h-4 w-4" />
-                      {bid.status === 'OUTBID' ? 'Increase Bid' : 'Update Bid'}
-                    </Button>
-                  )}
-                  {['WINNING', 'WON'].includes(bid.status) && (
-                    <Button
-                      size="xs"
-                      color="light"
-                      as="a"
-                      href={`/bidder/certificates/${bid.certificateId}`}
-                    >
-                      View Certificate
+                      <HiArrowUp className="mr-1" />
+                      Lower Rate
                     </Button>
                   )}
                 </Table.Cell>
@@ -293,170 +325,186 @@ const BidderBidsPage: React.FC = () => {
     );
   };
 
-  return (
-    <div className="px-4 pt-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">My Bids</h1>
-        <p className="text-gray-600">View and manage your bids on tax certificates</p>
+  // Get auction ID from URL params to determine if we're in a county auction context
+  const { auctionId } = useParams<{ auctionId: string }>();
+  const isCountyContext = !!auctionId;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spinner size="xl" />
       </div>
+    );
+  }
 
-      <Card>
-        <div className="mb-4 flex justify-between items-center">
-          <div className="w-full md:w-1/3">
-            <TextInput
-              id="search"
-              type="search"
-              icon={HiSearch}
-              placeholder="Search by certificate # or address"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-
+  return (
+    <>
+      {/* CRITICAL PATH: County Header must be first element */}
+      {isCountyContext && <CountyHeader />}
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">My Bids</h1>
           <Button color="blue" onClick={() => refetch()}>
-            Refresh
+            Refresh Bids
           </Button>
         </div>
 
-        <Tabs.Group aria-label="Bid tabs" style="underline" onActiveTabChange={setActiveTab}>
-          <Tabs.Item
-            title={
-              <div className="flex items-center gap-2">
-                Active Bids
-                {activeBids.length > 0 && (
-                  <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold text-white bg-blue-500 rounded-full">
-                    {activeBids.length}
-                  </span>
-                )}
-              </div>
-            }
-          >
-            {renderBidsTable(activeBids)}
-          </Tabs.Item>
-
-          <Tabs.Item title="Completed Bids">{renderBidsTable(completedBids)}</Tabs.Item>
-        </Tabs.Group>
-
-        {!loading && !error && activeBids.length > 0 && activeTab === 0 && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <div className="text-sm text-blue-700">
-              <p className="font-medium">Bidding Information</p>
-              <ul className="list-disc list-inside mt-2 space-y-1 text-blue-600">
-                <li>You will be notified if you are outbid on a certificate</li>
-                <li>You can increase your bid at any time before the auction ends</li>
-                <li>
-                  If you win, the certificate will appear in your &quot;My Certificates&quot; page
-                </li>
-                <li>Payment will be processed automatically for winning bids</li>
-              </ul>
+        <Card>
+          <div className="mb-4 flex justify-between items-center">
+            <div className="w-full md:w-1/3">
+              <TextInput
+                id="search"
+                type="search"
+                icon={HiSearch}
+                placeholder="Search by certificate # or address"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
             </div>
+
+            <Button color="blue" onClick={() => refetch()}>
+              Refresh
+            </Button>
           </div>
-        )}
-      </Card>
 
-      {/* Increase Bid Modal */}
-      <Modal show={showBidModal} onClose={() => setShowBidModal(false)} popup size="md">
-        <Modal.Header>Increase Bid</Modal.Header>
-        <Modal.Body>
-          {selectedBid && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Certificate #{selectedBid.certificateNumber}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {selectedBid.propertyAddress || selectedBid.certificate?.propertyAddress || 'N/A'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Face Value:</span>
-                  <span className="font-medium">
-                    {formatCurrency(selectedBid.certificate?.faceValue || 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Interest Rate:</span>
-                  <span className="font-medium">{selectedBid.certificate?.interestRate || 0}%</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Your Current Bid:</span>
-                  <span className="font-medium">{formatCurrency(selectedBid.bidAmount)}</span>
-                </div>
-                {selectedBid.status === 'OUTBID' && (
-                  <div className="flex justify-between text-sm text-red-600">
-                    <span>Current Highest Bid:</span>
-                    <span className="font-medium">
-                      {formatCurrency(selectedBid.winningBid || 0)}
+          <Tabs.Group aria-label="Bid tabs" style="underline" onActiveTabChange={setActiveTab}>
+            <Tabs.Item
+              title={
+                <div className="flex items-center gap-2">
+                  Active Bids
+                  {activeBids.length > 0 && (
+                    <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold text-white bg-blue-500 rounded-full">
+                      {activeBids.length}
                     </span>
-                  </div>
-                )}
-              </div>
-
-              {selectedBid.status === 'OUTBID' && (
-                <div className="p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
-                  <div className="flex items-center">
-                    <HiOutlineExclamationCircle className="w-5 h-5 mr-2" />
-                    <span className="font-medium">You&apos;ve been outbid</span>
-                  </div>
-                  <p className="mt-1">
-                    Your bid needs to be at least{' '}
-                    {formatCurrency((selectedBid.winningBid || 0) * 1.01)} to become the highest
-                    bidder.
-                  </p>
+                  )}
                 </div>
-              )}
+              }
+            >
+              {renderBidsTable(activeBids)}
+            </Tabs.Item>
 
-              <div>
-                <div className="mb-2 block">
-                  <Label htmlFor="bidAmount" value="New Bid Amount ($)" />
-                </div>
-                <TextInput
-                  id="bidAmount"
-                  type="number"
-                  step="0.01"
-                  min={
-                    selectedBid.status === 'OUTBID'
-                      ? (selectedBid.winningBid || 0) * 1.01
-                      : selectedBid.bidAmount * 1.01
-                  }
-                  value={newBidAmount}
-                  onChange={e => setNewBidAmount(e.target.value)}
-                  required
-                />
-              </div>
+            <Tabs.Item title="Completed Bids">{renderBidsTable(completedBids)}</Tabs.Item>
+          </Tabs.Group>
 
-              {selectedBid.auction?.endTime && (
-                <div className="text-sm text-gray-600">
-                  <p>Time remaining: {getTimeRemaining(selectedBid.auction.endTime)}</p>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3">
-                <Button color="gray" onClick={() => setShowBidModal(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  color="blue"
-                  onClick={handleIncreaseBid}
-                  isProcessing={submitting}
-                  disabled={
-                    submitting ||
-                    !newBidAmount ||
-                    parseFloat(newBidAmount) <= selectedBid.bidAmount ||
-                    (selectedBid.status === 'OUTBID' &&
-                      parseFloat(newBidAmount) <= (selectedBid.winningBid || 0))
-                  }
-                >
-                  Confirm New Bid
-                </Button>
+          {!loading && !error && activeBids.length > 0 && activeTab === 0 && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="text-sm text-blue-700">
+                <p className="font-medium">Bidding Information</p>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-blue-600">
+                  <li>Florida tax certificates are awarded to bidders offering the lowest interest rate</li>
+                  <li>Bids must be in 0.25% increments</li>
+                  <li>You will be notified if someone bids a lower rate</li>
+                  <li>If you win, the certificate will appear in your &quot;My Certificates&quot; page</li>
+                  <li>Payment will be processed automatically for winning bids</li>
+                </ul>
               </div>
             </div>
           )}
-        </Modal.Body>
-      </Modal>
-    </div>
+        </Card>
+
+        {/* Increase Bid Modal - Renamed to "Lower Interest Rate" */}
+        <Modal show={showBidModal} onClose={() => setShowBidModal(false)} popup size="md">
+          <Modal.Header>Lower Interest Rate</Modal.Header>
+          <Modal.Body>
+            {selectedBid && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    Certificate #{selectedBid.certificateNumber}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {selectedBid.propertyAddress || selectedBid.certificate?.propertyAddress || 'N/A'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Face Value:</span>
+                    <span className="font-medium">
+                      {formatCurrency(selectedBid.certificate?.faceValue || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Certificate Interest Rate:</span>
+                    <span className="font-medium">{selectedBid.certificate?.interestRate || 0}%</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Your Current Bid Rate:</span>
+                    <span className="font-medium">{formatPercent(selectedBid.interestRate)}</span>
+                  </div>
+                  {selectedBid.status === 'OUTBID' && (
+                    <div className="flex justify-between text-sm text-red-600">
+                      <span>Current Lowest Rate:</span>
+                      <span className="font-medium">
+                        {formatPercent(selectedBid.winningBid ? 0 : selectedBid.interestRate + 0.25)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {selectedBid.status === 'OUTBID' && (
+                  <div className="p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
+                    <div className="flex items-center">
+                      <HiOutlineExclamationCircle className="w-5 h-5 mr-2" />
+                      <span className="font-medium">You&apos;ve been outbid</span>
+                    </div>
+                    <p className="mt-1">
+                      Your bid must be at least 0.25% lower than the current lowest bid to become the winning bidder.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <div className="mb-2 block">
+                    <Label htmlFor="bidRate" value="New Interest Rate (%)" />
+                  </div>
+                  <TextInput
+                    id="bidRate"
+                    type="number"
+                    step="0.25"
+                    min={0}
+                    max={18}
+                    value={newBidRate}
+                    onChange={e => setNewBidRate(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter a rate between 0% and 18% in 0.25% increments</p>
+                </div>
+
+                {selectedBid.auction?.endTime && (
+                  <div className="text-sm text-gray-600">
+                    <p>Time remaining: {getTimeRemaining(selectedBid.auction.endTime)}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3">
+                  <Button color="gray" onClick={() => setShowBidModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    color="blue"
+                    onClick={handleIncreaseBid}
+                    isProcessing={submitting}
+                    disabled={
+                      submitting ||
+                      !newBidRate ||
+                      parseFloat(newBidRate) >= selectedBid.interestRate ||
+                      (selectedBid.status === 'OUTBID' &&
+                        parseFloat(newBidRate) >= (selectedBid.interestRate - 0.25)) ||
+                      parseFloat(newBidRate) < 0 ||
+                      parseFloat(newBidRate) > 18 ||
+                      (parseFloat(newBidRate) * 4) % 1 !== 0 // Check for 0.25% increments
+                    }
+                  >
+                    Submit Lower Rate
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Modal.Body>
+        </Modal>
+      </div>
+    </>
   );
 };
 
